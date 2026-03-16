@@ -1,0 +1,61 @@
+name: Build Official Signed AAB
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Install dependencies
+        run: |
+          npm install
+          npm install @capacitor/cli @capacitor/core @capacitor/android
+
+      - name: Fix Vite Permissions
+        run: chmod +x node_modules/.bin/vite
+
+      - name: Build web project
+        run: npm run build
+        
+      - name: Sync with Capacitor
+        run: npx cap sync android
+
+      - name: Prepare Keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_CONTENT }}" | base64 -d > release.keystore
+
+      - name: Build Signed Release AAB
+        run: |
+          cd android
+          chmod +x gradlew
+          # تم تغيير assembleRelease إلى bundleRelease لإنتاج AAB
+          ./gradlew bundleRelease \
+            -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/release.keystore \
+            -Pandroid.injected.signing.store.password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.ANDROID_KEY_ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Rename and Prepare AAB
+        run: |
+          mkdir -p final-bundle
+          # مسار الـ AAB يختلف عن مسار الـ APK
+          mv android/app/build/outputs/bundle/release/app-release.aab "final-bundle/Mushaf_Official_v4.aab"
+
+      - name: Upload Official AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mushaf-Official-AAB
+          path: final-bundle/Mushaf_Official_v4.aab
