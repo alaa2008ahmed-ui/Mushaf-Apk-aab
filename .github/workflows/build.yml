@@ -43,7 +43,7 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          # بناء الاثنين معاً في خطوة واحدة
+          # بناء النسختين معاً بتوقيع رسمي 
           ./gradlew assembleRelease bundleRelease \
             -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/release.keystore \
             -Pandroid.injected.signing.store.password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }} \
@@ -53,13 +53,16 @@ jobs:
       - name: Prepare Final Files
         run: |
           mkdir -p final-outputs
-          # البحث عن ملف الـ APK ونسخه مهما كان اسمه (طالما في مجلد release)
-          find android/app/build/outputs/apk/release -name "*.apk" -exec cp {} final-outputs/Mushaf_v4_Test.apk \;
-          # البحث عن ملف الـ AAB ونسخه مهما كان اسمه
-          find android/app/build/outputs/bundle/release -name "*.aab" -exec cp {} final-outputs/Mushaf_v4_Official.aab \;
+          # البحث الشامل في كل مجلد المخرجات عن الـ APK 
+          find android/app/build/outputs/apk -name "*.apk" -exec cp {} final-outputs/Mushaf_v4_Test.apk \;
+          # البحث الشامل عن الـ AAB 
+          find android/app/build/outputs/bundle -name "*.aab" -exec cp {} final-outputs/Mushaf_v4_Official.aab \;
+          
+          # تأكيد وجود الملفات في اللوج (للإصلاح في حال الفشل)
+          ls -R final-outputs
 
       - name: Upload APK and AAB
         uses: actions/upload-artifact@v4
         with:
-          name: Mushaf-Complete-Package
+          name: Mushaf-Final-Package
           path: final-outputs/*
