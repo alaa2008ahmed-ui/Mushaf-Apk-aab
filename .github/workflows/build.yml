@@ -43,26 +43,17 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          # بناء النسختين معاً بتوقيع رسمي 
           ./gradlew assembleRelease bundleRelease \
             -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/release.keystore \
             -Pandroid.injected.signing.store.password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }} \
             -Pandroid.injected.signing.key.alias=${{ secrets.ANDROID_KEY_ALIAS }} \
             -Pandroid.injected.signing.key.password=${{ secrets.ANDROID_KEY_PASSWORD }}
 
-      - name: Prepare Final Files
-        run: |
-          mkdir -p final-outputs
-          # البحث الشامل في كل مجلد المخرجات عن الـ APK 
-          find android/app/build/outputs/apk -name "*.apk" -exec cp {} final-outputs/Mushaf_v4_Test.apk \;
-          # البحث الشامل عن الـ AAB 
-          find android/app/build/outputs/bundle -name "*.aab" -exec cp {} final-outputs/Mushaf_v4_Official.aab \;
-          
-          # تأكيد وجود الملفات في اللوج (للإصلاح في حال الفشل)
-          ls -R final-outputs
-
-      - name: Upload APK and AAB
+      - name: Upload APK and AAB (The Radar Way)
         uses: actions/upload-artifact@v4
         with:
           name: Mushaf-Final-Package
-          path: final-outputs/*
+          # السطر ده هيدور في كل مجلدات الأندرويد ويجمع أي APK وأي AAB مهما كان مكانهم أو اسمهم
+          path: |
+            android/app/build/outputs/apk/**/*.apk
+            android/app/build/outputs/bundle/**/*.aab
