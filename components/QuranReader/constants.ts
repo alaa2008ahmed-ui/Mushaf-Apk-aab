@@ -44,7 +44,6 @@ export const READERS = [
     { id: 'Abdul_Basit_Mujawwad_128kbps', name: 'عبدالباسط عبدالصمد (مجود)' },
     { id: 'Abdul_Basit_Murattal_192kbps', name: 'عبدالباسط عبدالصمد (مرتل)' },
     { id: 'Abdurrahmaan_As-Sudais_192kbps', name: 'عبدالرحمن السديس' },
-    { id: 'Abdullaah_3awwaad_Al-Juhaynee_128kbps', name: 'عبدالله الجهني' },
     { id: 'Abdullah_Basfar_192kbps', name: 'عبدالله بصفر' },
     { id: 'Abdullah_Matroud_128kbps', name: 'عبدالله مطرود' },
     { id: 'Hudhaify_128kbps', name: 'علي الحذيفي' },
@@ -214,3 +213,16 @@ export const SURAH_INFO: Record<number, { ayahs: number, type: string }> = {
 };
 
 export const toArabic = (n: number | string) => String(n).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[+d]);
+
+export const DEFAULT_SETTINGS = {
+    fontSize: 1.7,
+    fontFamily: "var(--font-amiri)",
+    textColor: "#000000",
+    bgColor: "#ffffff",
+    highlightTextColor: "#d97706",
+    reader: 'Abu_Bakr_Ash-Shaatree_128kbps',
+    theme: 'default',
+    scrollMinutes: 20,
+    tafseer: 'ar.jalalayn',
+    lockHighlightColor: false
+};

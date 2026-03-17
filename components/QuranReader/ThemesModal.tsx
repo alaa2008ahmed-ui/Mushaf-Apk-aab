@@ -1,5 +1,5 @@
 import React from 'react';
-import { THEMES } from './constants';
+import { THEMES, DEFAULT_SETTINGS } from './constants';
 
 interface ThemesModalProps {
     onClose: () => void;
@@ -16,6 +16,19 @@ const ThemesModal: React.FC<ThemesModalProps> = ({ onClose, showToast, isLandsca
         const saved = JSON.parse(localStorage.getItem('quran_settings' + modeSuffix) || '{}');
         return saved.lockHighlightColor || false;
     });
+
+    const [isTransparent, setIsTransparent] = React.useState(() => {
+        return localStorage.getItem('transparent_mode' + modeSuffix) === 'true';
+    });
+
+    const toggleTransparency = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newValue = !isTransparent;
+        setIsTransparent(newValue);
+        localStorage.setItem('transparent_mode' + modeSuffix, String(newValue));
+        window.dispatchEvent(new Event('theme-change'));
+        showToast(newValue ? 'تم تفعيل الشفافية' : 'تم تعطيل الشفافية');
+    };
 
     const toggleLockHighlightColor = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -80,16 +93,16 @@ const ThemesModal: React.FC<ThemesModalProps> = ({ onClose, showToast, isLandsca
         }
 
         localStorage.setItem('toolbar_colors' + modeSuffix, JSON.stringify(themeColors));
-        localStorage.setItem('transparent_mode' + modeSuffix, 'false');
 
         // Update quran_settings to match the theme's colors and font
         const savedSettings = JSON.parse(localStorage.getItem('quran_settings' + modeSuffix) || '{}');
+        const baseSettings = { ...DEFAULT_SETTINGS, ...savedSettings };
         const updatedSettings = {
-            ...savedSettings,
+            ...baseSettings,
             bgColor: theme.bg,
             textColor: theme.text,
             fontFamily: theme.font,
-            ...(savedSettings.lockHighlightColor ? {} : { highlightTextColor: theme.highlightText || theme.accent }),
+            ...(baseSettings.lockHighlightColor ? {} : { highlightTextColor: theme.highlightText || theme.accent }),
             theme: themeId
         };
         localStorage.setItem('quran_settings' + modeSuffix, JSON.stringify(updatedSettings));
@@ -102,18 +115,26 @@ const ThemesModal: React.FC<ThemesModalProps> = ({ onClose, showToast, isLandsca
     };
 
     return (
-        <div className="fixed inset-0 z-[190] bg-black/30 flex justify-center items-center px-4 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
+        <div className="fixed inset-0 z-[190] bg-black/60 flex justify-center items-center px-4 animate-fadeIn" onClick={onClose}>
             <div className={`modal-skinned w-full ${isLandscape ? 'max-w-4xl' : 'max-w-md'} rounded-2xl flex flex-col max-h-[85vh] shadow-2xl`} onClick={e => e.stopPropagation()}>
                 <div className="p-4 rounded-t-2xl flex justify-between items-center shadow-md theme-header-bg">
                     <h3 className="font-bold text-lg">اختر الثيم</h3>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={toggleTransparency}
+                            className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold transition-all ${isTransparent ? 'bg-blue-500 text-white shadow-lg' : 'bg-white/20 text-white'}`}
+                            title="تفعيل/تعطيل شفافية الأشرطة"
+                        >
+                            <i className={`fa-solid ${isTransparent ? 'fa-eye' : 'fa-eye-slash'}`}></i>
+                            <span>شفافية الأشرطة</span>
+                        </button>
                         <button 
                             onClick={toggleLockHighlightColor}
                             className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold transition-all ${lockHighlightColor ? 'bg-amber-500 text-white shadow-lg' : 'bg-white/20 text-white'}`}
                             title="قفل لون التحديد الحالي"
                         >
                             <i className={`fa-solid ${lockHighlightColor ? 'fa-lock' : 'fa-lock-open'}`}></i>
-                            <span>قفل لون التحديد</span>
+                            <span>لون التحديد</span>
                         </button>
                         <button onClick={onClose} className="text-2xl hover:opacity-80 transition">&times;</button>
                     </div>
@@ -128,7 +149,7 @@ const ThemesModal: React.FC<ThemesModalProps> = ({ onClose, showToast, isLandsca
                         >
                             <div className="font-bold mb-2 text-sm">{t.name}</div>
                             <div className="w-full h-20 rounded-lg p-2 shadow-inner flex flex-col justify-between" style={{ backgroundColor: t.bg }}>
-                                <div className="w-full h-5 rounded-sm" style={{ backgroundColor: t.barBg, opacity: t.isGlass ? 0.7 : 1 }}></div>
+                                <div className="w-full h-5 rounded-sm" style={{ backgroundColor: t.barBg }}></div>
                                 <p className="text-xs truncate" style={{ color: t.text, fontFamily: t.font }}>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
                                 <div className="flex items-center justify-end gap-1 mt-1">
                                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: t.btnBg }}></div>
