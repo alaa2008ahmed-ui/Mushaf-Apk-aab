@@ -1,13 +1,18 @@
-name: Build Official Signed APK and AAB
-on: [push]
+name: Build and Sign Official Release (v4)
+on:
+  push:
+    branches:
+      - main  # أو اسم الفرع الأساسي عندك (master/main)
+  workflow_dispatch: # يتيح لك تشغيل البناء يدوياً أيضاً
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Use Node.js 22
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -20,40 +25,46 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
           npm install
           npm install @capacitor/cli @capacitor/core @capacitor/android
 
-      - name: Build web project
+      - name: Build Web Project (Vite/React/Vue)
         run: |
-          chmod +x node_modules/.bin/vite || true
+          # تأكد أن هذا الأمر هو المستخدم في الـ package.json عندك
           npm run build
-        
+
       - name: Sync with Capacitor
         run: npx cap sync android
 
-      - name: Fix Path Check
+      - name: Fix Gradle Path Check
         run: echo "android.overridePathCheck=true" >> android/gradle.properties
 
-      - name: Prepare Keystore
-        run: echo "${{ secrets.ANDROID_KEYSTORE_CONTENT }}" | base64 -d > release.keystore
+      - name: Decrypt Keystore
+        run: |
+          # تحويل الكود النصي من Secrets إلى ملف حقيقي
+          echo "${{ secrets.ANDROID_KEYSTORE_CONTENT }}" | base64 -d > release.keystore
 
-      - name: Build Signed Release (APK and AAB)
+      - name: Build and Sign Release (APK & AAB)
         run: |
           cd android
           chmod +x gradlew
+          # بناء نسخة الـ Release وحقن المفاتيح مباشرة في عملية البناء
           ./gradlew assembleRelease bundleRelease \
             -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/release.keystore \
             -Pandroid.injected.signing.store.password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }} \
             -Pandroid.injected.signing.key.alias=${{ secrets.ANDROID_KEY_ALIAS }} \
             -Pandroid.injected.signing.key.password=${{ secrets.ANDROID_KEY_PASSWORD }}
 
-      - name: Upload APK and AAB (The Radar Way)
+      - name: Upload Signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: Mushaf-Final-Package
-          # السطر ده هيدور في كل مجلدات الأندرويد ويجمع أي APK وأي AAB مهما كان مكانهم أو اسمهم
-          path: |
-            android/app/build/outputs/apk/**/*.apk
-            android/app/build/outputs/bundle/**/*.aab
+          name: Ahmed-Laila-Release-APK
+          path: android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Upload Signed AAB (For Google Play)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ahmed-Laila-Release-AAB
+          path: android/app/build/outputs/bundle/release/app-release.aab
