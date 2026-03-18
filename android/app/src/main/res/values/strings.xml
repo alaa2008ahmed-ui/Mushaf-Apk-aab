@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Ahmed & Laila</string>
-    <string name="title_activity_main">Ahmed & Laila</string>
+    <string name="app_name">Ahmed &amp; Laila</string>
+    <string name="title_activity_main">Ahmed &amp; Laila</string>
+    
     <string name="package_name">com.AhmedLaila.Quran</string>
     <string name="custom_url_scheme">com.AhmedLaila.Quran</string>
 </resources>
