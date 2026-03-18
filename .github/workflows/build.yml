@@ -1,9 +1,5 @@
-name: Build and Sign Official Release (v4)
-on:
-  push:
-    branches:
-      - main  # أو اسم الفرع الأساسي عندك (master/main)
-  workflow_dispatch: # يتيح لك تشغيل البناء يدوياً أيضاً
+name: Build Official Signed APK and AAB
+on: [push]
 
 jobs:
   build:
@@ -11,8 +7,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
-      - name: Set up Node.js 22
+      
+      - name: Use Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -25,46 +21,42 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
           npm install
           npm install @capacitor/cli @capacitor/core @capacitor/android
 
-      - name: Build Web Project (Vite/React/Vue)
+      - name: Build web project
         run: |
-          # تأكد أن هذا الأمر هو المستخدم في الـ package.json عندك
+          chmod +x node_modules/.bin/vite || true
           npm run build
-
+        
       - name: Sync with Capacitor
         run: npx cap sync android
 
-      - name: Fix Gradle Path Check
+      - name: Fix Path Check
         run: echo "android.overridePathCheck=true" >> android/gradle.properties
 
-      - name: Decrypt Keystore
-        run: |
-          # تحويل الكود النصي من Secrets إلى ملف حقيقي
-          echo "${{ secrets.ANDROID_KEYSTORE_CONTENT }}" | base64 -d > release.keystore
+      - name: Prepare Keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_CONTENT }}" | base64 -d > release.keystore
 
-      - name: Build and Sign Release (APK & AAB)
+      - name: Build Signed Release (APK and AAB Together)
         run: |
           cd android
           chmod +x gradlew
-          # بناء نسخة الـ Release وحقن المفاتيح مباشرة في عملية البناء
-          ./gradlew assembleRelease bundleRelease \
+          # "clean" تضمن مسح أي ملفات قديمة لكي لا تختلط بالنسخ الجديدة
+          ./gradlew clean assembleRelease bundleRelease \
             -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/release.keystore \
             -Pandroid.injected.signing.store.password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }} \
             -Pandroid.injected.signing.key.alias=${{ secrets.ANDROID_KEY_ALIAS }} \
             -Pandroid.injected.signing.key.password=${{ secrets.ANDROID_KEY_PASSWORD }}
 
-      - name: Upload Signed APK
+      - name: Upload Final Packages (APK & AAB)
         uses: actions/upload-artifact@v4
         with:
-          name: Ahmed-Laila-Release-APK
-          path: android/app/build/outputs/apk/release/app-release.apk
-
-      - name: Upload Signed AAB (For Google Play)
-        uses: actions/upload-artifact@v4
-        with:
-          name: Ahmed-Laila-Release-AAB
-          path: android/app/build/outputs/bundle/release/app-release.aab
+          name: Mushaf-Final-Package
+          # المسارات محددة لضمان جلب النسخ الـ Signed فقط (الموقعة)
+          path: |
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
