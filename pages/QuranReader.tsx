@@ -813,16 +813,23 @@ const QuranReader: FC<{ onBack: () => void, initialLandscape?: boolean }> = ({ o
         }
     };
 
-    const handleAutoScrollButtonPointerDown = (e: React.PointerEvent) => {
+    const handleAutoScrollButtonPointerDown = (e: React.SyntheticEvent) => {
         e.stopPropagation();
+        if (e && e.type === 'touchstart') {
+            e.preventDefault();
+        }
+        if (autoScrollButtonTimerRef.current) return;
         autoScrollButtonTimerRef.current = window.setTimeout(() => {
             autoScrollButtonTimerRef.current = null;
             setIsAutoScrollSettingsOpen(true);
         }, 500);
     };
 
-    const handleAutoScrollButtonPointerUp = (e: React.PointerEvent) => {
+    const handleAutoScrollButtonPointerUp = (e: React.SyntheticEvent) => {
         e.stopPropagation();
+        if (e && e.type === 'touchend') {
+            e.preventDefault();
+        }
         if (autoScrollButtonTimerRef.current) {
             clearTimeout(autoScrollButtonTimerRef.current);
             autoScrollButtonTimerRef.current = null;
@@ -830,7 +837,7 @@ const QuranReader: FC<{ onBack: () => void, initialLandscape?: boolean }> = ({ o
         }
     };
 
-    const handleAutoScrollButtonPointerLeave = (e: React.PointerEvent) => {
+    const handleAutoScrollButtonPointerLeave = (e: React.SyntheticEvent) => {
         e.stopPropagation();
         if (autoScrollButtonTimerRef.current) {
             clearTimeout(autoScrollButtonTimerRef.current);
@@ -1028,9 +1035,9 @@ const QuranReader: FC<{ onBack: () => void, initialLandscape?: boolean }> = ({ o
     const isBookmarksModalOpen = activeModals.includes('bookmarks-modal');
     useEffect(() => {
         if (isBookmarksModalOpen) {
-            setBookmarks(JSON.parse(localStorage.getItem('quran_bookmarks_list') || '[]'));
+            setBookmarks(JSON.parse(localStorage.getItem('quran_bookmarks_list' + modeSuffix) || '[]'));
         }
-    }, [isBookmarksModalOpen]);
+    }, [isBookmarksModalOpen, modeSuffix]);
 
     useEffect(() => {
         const contentEl = mushafContentRef.current;
@@ -1184,8 +1191,6 @@ const QuranReader: FC<{ onBack: () => void, initialLandscape?: boolean }> = ({ o
         }
     }, [quranData, jumpToAyah, getPageData, showToast]);
 
-    const [bookmarksFilter, setBookmarksFilter] = useState<boolean | null>(null);
-
     const saveBookmark = () => { 
         if (!currentAyah) { showToast('اختر آية أولاً'); return; } 
         const stored = JSON.parse(localStorage.getItem('quran_bookmarks_list' + modeSuffix) || '[]'); 
@@ -1194,14 +1199,13 @@ const QuranReader: FC<{ onBack: () => void, initialLandscape?: boolean }> = ({ o
             id: Date.now(), 
             s: currentAyah.s, 
             a: currentAyah.a, 
-            isLandscape: isLandscapeRef.current,
             date: date.toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' }), 
             time: date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) 
         }; 
         const newBookmarks = [newBookmark, ...stored]; 
         localStorage.setItem('quran_bookmarks_list' + modeSuffix, JSON.stringify(newBookmarks)); 
         setBookmarks(newBookmarks); 
-        showToast(`تم حفظ الإشارة (${isLandscapeRef.current ? 'أفقي' : 'رأسي'})`); 
+        showToast(`تم حفظ الإشارة المرجعية`); 
     };
     const deleteBookmark = (id:number) => { 
         const newBookmarks = bookmarks.filter((b:any) => b.id !== id); 
@@ -1210,15 +1214,22 @@ const QuranReader: FC<{ onBack: () => void, initialLandscape?: boolean }> = ({ o
     };
 
     const bookmarkButtonTimerRef = useRef<number | null>(null);
-    const handleBookmarkButtonPointerDown = () => {
+    const handleBookmarkButtonPointerDown = (e?: React.SyntheticEvent) => {
+        if (e && e.type === 'touchstart') {
+            // Prevent pointer events if touch is handled
+            e.preventDefault();
+        }
+        if (bookmarkButtonTimerRef.current) return;
         bookmarkButtonTimerRef.current = window.setTimeout(() => {
             bookmarkButtonTimerRef.current = null;
-            setBookmarksFilter(isLandscapeRef.current);
             openModal('bookmarks-modal');
         }, 500);
     };
 
-    const handleBookmarkButtonPointerUp = () => {
+    const handleBookmarkButtonPointerUp = (e?: React.SyntheticEvent) => {
+        if (e && e.type === 'touchend') {
+            e.preventDefault();
+        }
         if (bookmarkButtonTimerRef.current) {
             clearTimeout(bookmarkButtonTimerRef.current);
             bookmarkButtonTimerRef.current = null;
@@ -1650,7 +1661,7 @@ const QuranReader: FC<{ onBack: () => void, initialLandscape?: boolean }> = ({ o
             </div>
             <MarkerNotification isVisible={markerNotification.show} type={markerNotification.type} text={markerNotification.text} />
             <div id="floating-menu" className={isFloatingMenuOpen ? 'open' : ''} ref={floatingMenuRef}>
-                 <button onClick={() => { setBookmarksFilter(null); openModal('bookmarks-modal'); setIsFloatingMenuOpen(false); }} className="bottom-bar-button btn-green w-full justify-between mb-2" style={getToolbarStyle('btn-bookmarks-list', currentTheme.btnBg, currentTheme.btnText, currentTheme.btnBg)}><span>قائمة الإشارات</span><i className="fa-solid fa-list"></i></button>
+                 <button onClick={() => { openModal('bookmarks-modal'); setIsFloatingMenuOpen(false); }} className="bottom-bar-button btn-green w-full justify-between mb-2" style={getToolbarStyle('btn-bookmarks-list', currentTheme.btnBg, currentTheme.btnText, currentTheme.btnBg)}><span>قائمة الإشارات</span><i className="fa-solid fa-list"></i></button>
                  {!initialLandscape && (
                      <button onClick={() => { openModal('search-modal'); setIsFloatingMenuOpen(false); }} className="bottom-bar-button btn-purple w-full justify-between mb-2" style={getToolbarStyle('btn-search', currentTheme.btnBg, currentTheme.btnText, currentTheme.btnBg)}><span>البحث</span><i className="fa-solid fa-search"></i></button>
                  )}
@@ -1664,6 +1675,9 @@ const QuranReader: FC<{ onBack: () => void, initialLandscape?: boolean }> = ({ o
                     onPointerDown={handleBookmarkButtonPointerDown}
                     onPointerUp={handleBookmarkButtonPointerUp}
                     onPointerLeave={handleBookmarkButtonPointerLeave}
+                    onTouchStart={handleBookmarkButtonPointerDown}
+                    onTouchEnd={handleBookmarkButtonPointerUp}
+                    onTouchCancel={handleBookmarkButtonPointerLeave}
                     className="bottom-bar-button btn-green flex-1 mx-1" 
                     style={{...getToolbarStyle('btn-bookmark', currentTheme.btnBg, currentTheme.btnText, currentTheme.btnBg), touchAction: 'none'}}
                 >
@@ -1675,6 +1689,9 @@ const QuranReader: FC<{ onBack: () => void, initialLandscape?: boolean }> = ({ o
                     onPointerDown={handleAutoScrollButtonPointerDown}
                     onPointerUp={handleAutoScrollButtonPointerUp}
                     onPointerLeave={handleAutoScrollButtonPointerLeave}
+                    onTouchStart={handleAutoScrollButtonPointerDown}
+                    onTouchEnd={handleAutoScrollButtonPointerUp}
+                    onTouchCancel={handleAutoScrollButtonPointerLeave}
                     className="bottom-bar-button btn-purple flex-1 mx-1" 
                     style={{...getToolbarStyle('btn-autoscroll', currentTheme.btnBg, currentTheme.btnText, currentTheme.btnBg), touchAction: 'none'}}
                 >
@@ -1701,18 +1718,13 @@ const QuranReader: FC<{ onBack: () => void, initialLandscape?: boolean }> = ({ o
                 <BookmarksModal 
                     bookmarks={bookmarks} 
                     quranData={quranData} 
-                    filterLandscape={bookmarksFilter}
                     isLandscape={isLandscape}
                     onSelect={(s, a, isL) => {
-                        if (isL !== isLandscapeRef.current) {
-                            setIsLandscape(isL);
-                        }
                         jumpToAyah(s, a, true);
                     }} 
                     onDelete={deleteBookmark} 
                     onClose={() => {
                         closeModal('bookmarks-modal');
-                        setBookmarksFilter(null);
                     }} 
                 />
             )}
