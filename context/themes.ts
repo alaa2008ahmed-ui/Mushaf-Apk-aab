@@ -8,6 +8,8 @@ export interface Theme {
     palette: string[];
     barBg?: string;
     barBorder?: string;
+    topBarBg?: string;
+    topBarText?: string;
     btnBorder?: string;
     btnBg?: string;
     btnText?: string;
@@ -19,11 +21,14 @@ export const presetThemes: { [key: string]: Theme } = {
     default: {
         name: "الافتراضي",
         bgColor: "#FFFFFF",
+        isOriginal: true,
         textColor: "#000000",
         font: "'Cairo', sans-serif",
-        palette: ["#059669", "#7C3AED", "#047857"],
+        palette: ["#14b8a6", "#7C3AED", "#0d9488"],
         barBg: "#FFFFFF",
-        barBorder: "1px solid #F3F4F6"
+        barBorder: "1px solid #F3F4F6",
+        topBarBg: "#14b8a6",
+        topBarText: "#FFFFFF"
     },
     black_and_white: {
         name: "أبيض وأسود",

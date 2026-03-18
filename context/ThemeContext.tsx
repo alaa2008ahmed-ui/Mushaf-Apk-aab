@@ -90,8 +90,8 @@ export const ThemeProvider = ({ children }: { children?: ReactNode }) => {
             if (videoBg) videoBg.style.display = 'none';
             document.body.style.backgroundColor = theme.bgColor || '#0D1B2A';
             document.body.style.backgroundImage = theme.isOriginal ? `
-                radial-gradient(circle at 15% 25%, rgba(20, 184, 166, 0.1), transparent 30%),
-                radial-gradient(circle at 85% 75%, rgba(124, 58, 237, 0.1), transparent 30%)
+                radial-gradient(circle at 15% 25%, rgba(20, 184, 166, 0.5), transparent 50%),
+                radial-gradient(circle at 85% 75%, rgba(124, 58, 237, 0.5), transparent 50%)
             ` : 'none';
         }
 
@@ -110,8 +110,10 @@ export const ThemeProvider = ({ children }: { children?: ReactNode }) => {
         root.style.setProperty('--text-color-muted', isDark ? '#94a3b8' : '#64748b');
 
         // Bar and Card styles (solid colors)
-        const topBarRgb = hexToRgb(theme.isOriginal ? '#1a2233' : (theme.barBg || theme.palette[0]));
+        const topBarBgColor = theme.topBarBg || theme.barBg || theme.palette[0];
+        const topBarRgb = hexToRgb(theme.isOriginal ? '#1a2233' : topBarBgColor);
         root.style.setProperty('--top-bar-rgb', topBarRgb || '26, 35, 50');
+        root.style.setProperty('--top-bar-text', theme.topBarText || theme.textColor);
         root.style.setProperty('--bottom-bar-bg', theme.barBg || (isDark ? '#1e293b' : '#ffffff'));
         const barBorderColor = theme.barBorder ? theme.barBorder.split(' ')[2] : (isDark ? '#334155' : '#e2e8f0');
         root.style.setProperty('--bottom-bar-border', barBorderColor);
