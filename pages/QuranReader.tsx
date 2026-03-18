@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, FC } from 'react';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import './QuranReader.css'; 
-import { JUZ_MAP, toArabic, THEMES, TAFSEERS, READERS, DEFAULT_SETTINGS } from '../components/QuranReader/constants';
+import { JUZ_MAP, toArabic, THEMES, TAFSEERS, READERS, DEFAULT_SETTINGS, FONTS } from '../components/QuranReader/constants';
 import SearchModal from '../components/QuranReader/SearchModal';
 import ThemesModal from '../components/QuranReader/ThemesModal';
 import SettingsModal from '../components/QuranReader/SettingsModal';
@@ -62,6 +62,53 @@ const QuranReader: FC<{ onBack: () => void, initialLandscape?: boolean }> = ({ o
 
     const [activeModals, setActiveModals] = useState<string[]>([]);
     const [isFloatingMenuOpen, setIsFloatingMenuOpen] = useState(false);
+    const [ayahContextMenu, setAyahContextMenu] = useState<{isOpen: boolean, x: number, y: number, s: number, a: number, tempSettings: any}>({isOpen: false, x: 0, y: 0, s: 0, a: 0, tempSettings: DEFAULT_SETTINGS});
+    const [ayahContextColorField, setAyahContextColorField] = useState<'textColor' | 'bgColor' | 'highlightTextColor' | null>(null);
+
+    const PREDEFINED_COLORS = [
+        '#ffffff', '#f3f4f6', '#9ca3af', '#4b5563', '#000000',
+        '#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e',
+        '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6',
+        '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
+        '#f43f5e', '#78716c', '#57534e', 'transparent'
+    ];
+
+    const renderCheckerboard = (color: string) => {
+        if (color === 'transparent' || color === 'rgba(0, 0, 0, 0)') {
+            return {
+                backgroundColor: '#ffffff',
+                backgroundImage: 'linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%)',
+                backgroundSize: '8px 8px'
+            };
+        }
+        return { backgroundColor: color };
+    };
+    
+    // Close context menu on outside click
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+            if (ayahContextMenu.isOpen) {
+                const target = e.target as HTMLElement;
+                if (!target.closest('.ayah-context-menu')) {
+                    setAyahContextMenu(prev => ({ ...prev, isOpen: false }));
+                }
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
+    }, [ayahContextMenu.isOpen]);
+
+    const updateSetting = (key: string, value: any) => {
+        const modeSuffix = isLandscapeRef.current ? '_h' : '_v';
+        const newSettings = { ...settings, [key]: value };
+        setSettings(newSettings);
+        localStorage.setItem('quran_settings' + modeSuffix, JSON.stringify(newSettings));
+        window.dispatchEvent(new Event('settings-change'));
+    };
     const [isLandscapeUIHidden, setIsLandscapeUIHidden] = useState(() => {
         if (!initialLandscape) return false;
         return localStorage.getItem('is_landscape_ui_hidden') === 'true';
@@ -459,7 +506,7 @@ const QuranReader: FC<{ onBack: () => void, initialLandscape?: boolean }> = ({ o
     }, []);
 
     const handleSajdahVisible = useCallback((surahName: string, sNum: number, ayahNum: number) => {
-        if (markerNotification.show || sajdahCardInfoRef.current.show) return;
+        if (sajdahCardInfoRef.current.show) return;
 
         showMarkerNotification('sajda', `سجدة تلاوة: سورة ${surahName} - آية ${toArabic(ayahNum)}`);
 
@@ -731,6 +778,11 @@ const QuranReader: FC<{ onBack: () => void, initialLandscape?: boolean }> = ({ o
             autoScrollStateRef.current = { ...autoScrollStateRef.current, isPaused: true };
         }
         setTafseerSelectionInfo({ isOpen: true, s, a, wasAutoscrolling });
+    }, []);
+
+    const handleAyahLongPress = useCallback((s: number, a: number, x: number, y: number) => {
+        if (isLandscapeRef.current) return;
+        setAyahContextMenu({ isOpen: true, x, y, s, a, tempSettings: { ...settingsRef.current } });
     }, []);
 
     const handleTafseerSelect = useCallback((tafseerId: string) => {
@@ -1070,7 +1122,7 @@ const QuranReader: FC<{ onBack: () => void, initialLandscape?: boolean }> = ({ o
             lastScrollUpdateTime.current = now;
     
             const x = window.innerWidth / 2;
-            const y = contentEl.getBoundingClientRect().top + (contentEl.clientHeight / 2);
+            const y = window.innerHeight / 2;
             
             const el = document.elementFromPoint(x, y);
             if (!el) return;
@@ -1286,9 +1338,10 @@ const QuranReader: FC<{ onBack: () => void, initialLandscape?: boolean }> = ({ o
         const content = mushafContentRef.current;
         if (!content) return;
         
-        // Use a point slightly above the center if bars are hidden to avoid jumping
-        const centerY = content.getBoundingClientRect().top + (content.clientHeight / 2);
-        const el = document.elementFromPoint(window.innerWidth / 2, centerY); 
+        // Use the center of the screen
+        const x = window.innerWidth / 2;
+        const y = window.innerHeight / 2;
+        const el = document.elementFromPoint(x, y); 
         if (!el) return;
         const ayahBlock = el.closest('.ayah-text-block');
         if (ayahBlock && ayahBlock.id) {
@@ -1656,10 +1709,121 @@ const QuranReader: FC<{ onBack: () => void, initialLandscape?: boolean }> = ({ o
             <ReadingTimer isVisible={autoScrollState.isPaused || (!autoScrollState.isActive && autoScrollState.elapsedTime > 0)} elapsedTime={autoScrollState.elapsedTime} />
             <div id="mushaf-content" ref={mushafContentRef} onClick={handleScreenTap} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} className="flex-grow overflow-y-auto w-full relative touch-pan-y">
                 <div id="pages-container" className="full-mushaf-container">
-                   {[...new Set(visiblePages)].sort((a: number, b: number) => a - b).map(pageNum => (<MushafPage key={pageNum} pageNum={pageNum} pageData={getPageData(pageNum)} highlightedAyahId={highlightedAyahId} onAyahClick={handleAyahTextClick} onVerseClick={handleVerseClick} onVerseLongPress={handleVerseLongPress} onInteractionStart={handleInteractionStart} onInteractionEnd={handleInteractionEnd} settings={settings} />))}
+                   {[...new Set(visiblePages)].sort((a: number, b: number) => a - b).map(pageNum => (<MushafPage key={pageNum} pageNum={pageNum} pageData={getPageData(pageNum)} highlightedAyahId={highlightedAyahId} onAyahClick={handleAyahTextClick} onVerseClick={handleVerseClick} onVerseLongPress={handleVerseLongPress} onAyahLongPress={handleAyahLongPress} onInteractionStart={handleInteractionStart} onInteractionEnd={handleInteractionEnd} settings={settings} />))}
                 </div>
             </div>
             <MarkerNotification isVisible={markerNotification.show} type={markerNotification.type} text={markerNotification.text} />
+            
+            {ayahContextMenu.isOpen && !initialLandscape && (
+                <div className="fixed inset-0 z-[200] bg-black/30 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm animate-fadeIn" onClick={() => setAyahContextMenu(p => ({...p, isOpen: false}))}>
+                    <div 
+                        className="ayah-context-menu modal-skinned w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[85vh] animate-slide-up sm:animate-modal-enter" 
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="p-2 flex justify-between items-center h-10 flex-none theme-header-bg rounded-t-2xl">
+                            <h2 className="text-base font-bold">تخصيص الآية</h2>
+                            <button onClick={() => setAyahContextMenu(p => ({...p, isOpen: false}))} className="hover:opacity-80 rounded-full bg-white/20 w-7 h-7 flex items-center justify-center">✕</button>
+                        </div>
+                        
+                        <div className="p-2 overflow-y-auto flex-1 space-y-2">
+                            {/* Colors Section */}
+                            <div className="grid grid-cols-3 gap-2 border-b pb-2 border-gray-200 dark:border-gray-700">
+                                <div className="flex flex-col">
+                                    <label className="text-[9px] font-bold opacity-80 mb-0.5 text-center">لون النص</label>
+                                    <div 
+                                        className={`h-6 w-full rounded border shadow-sm cursor-pointer ${ayahContextColorField === 'textColor' ? 'border-indigo-500 ring-2 ring-indigo-200' : 'border-gray-300'}`}
+                                        style={renderCheckerboard(ayahContextMenu.tempSettings.textColor)}
+                                        onClick={() => setAyahContextColorField(ayahContextColorField === 'textColor' ? null : 'textColor')}
+                                    ></div>
+                                </div>
+                                <div className="flex flex-col">
+                                    <label className="text-[9px] font-bold opacity-80 mb-0.5 text-center">لون الخلفية</label>
+                                    <div 
+                                        className={`h-6 w-full rounded border shadow-sm cursor-pointer ${ayahContextColorField === 'bgColor' ? 'border-indigo-500 ring-2 ring-indigo-200' : 'border-gray-300'}`}
+                                        style={renderCheckerboard(ayahContextMenu.tempSettings.bgColor)}
+                                        onClick={() => setAyahContextColorField(ayahContextColorField === 'bgColor' ? null : 'bgColor')}
+                                    ></div>
+                                </div>
+                                <div className="flex flex-col">
+                                    <label className="text-[9px] font-bold opacity-80 mb-0.5 text-center">لون التحديد</label>
+                                    <div 
+                                        className={`h-6 w-full rounded border shadow-sm cursor-pointer ${ayahContextColorField === 'highlightTextColor' ? 'border-indigo-500 ring-2 ring-indigo-200' : 'border-gray-300'}`}
+                                        style={renderCheckerboard(ayahContextMenu.tempSettings.highlightTextColor || THEMES['default'].highlightText)}
+                                        onClick={() => setAyahContextColorField(ayahContextColorField === 'highlightTextColor' ? null : 'highlightTextColor')}
+                                    ></div>
+                                </div>
+                                
+                                {ayahContextColorField && (
+                                    <div className="col-span-3 bg-gray-50 dark:bg-gray-800/80 p-2 rounded-xl border border-gray-200 dark:border-gray-700 mt-1 animate-fadeIn">
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">
+                                                اختر لون {ayahContextColorField === 'bgColor' ? 'الخلفية' : ayahContextColorField === 'textColor' ? 'النص' : 'التحديد'}
+                                            </span>
+                                            <button onClick={() => setAyahContextColorField(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                                                <i className="fa-solid fa-times text-[10px]"></i>
+                                            </button>
+                                        </div>
+                                        <div className="grid grid-cols-8 gap-1">
+                                            {PREDEFINED_COLORS.map(c => (
+                                                <button
+                                                    key={c}
+                                                    onClick={() => setAyahContextMenu(prev => ({
+                                                        ...prev,
+                                                        tempSettings: { ...prev.tempSettings, [ayahContextColorField!]: c }
+                                                    }))}
+                                                    className={`h-5 rounded border shadow-sm transition-transform hover:scale-110 ${ayahContextMenu.tempSettings[ayahContextColorField!] === c ? 'ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-gray-800' : 'border-gray-200 dark:border-gray-600'}`}
+                                                    style={renderCheckerboard(c)}
+                                                    title={c}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Fonts Section - Dropdown */}
+                            <div className="flex items-center justify-between gap-2">
+                                <label className="text-[11px] font-bold opacity-80 whitespace-nowrap">نوع الخط:</label>
+                                <select 
+                                    value={ayahContextMenu.tempSettings.fontFamily}
+                                    onChange={(e) => setAyahContextMenu(prev => ({
+                                        ...prev,
+                                        tempSettings: { ...prev.tempSettings, fontFamily: e.target.value }
+                                    }))}
+                                    className="flex-1 p-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                                    style={{ fontFamily: ayahContextMenu.tempSettings.fontFamily }}
+                                >
+                                    {FONTS.map(f => (
+                                        <option key={f.id} value={f.id} style={{ fontFamily: f.id }}>
+                                            {f.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Save and Close Button */}
+                            <div className="pt-1">
+                                <button 
+                                    onClick={() => {
+                                        const modeSuffix = isLandscapeRef.current ? '_h' : '_v';
+                                        const newSettings = { ...settings, ...ayahContextMenu.tempSettings };
+                                        setSettings(newSettings);
+                                        localStorage.setItem('quran_settings' + modeSuffix, JSON.stringify(newSettings));
+                                        window.dispatchEvent(new Event('settings-change'));
+                                        setAyahContextMenu(p => ({ ...p, isOpen: false }));
+                                        showToast('تم حفظ وتطبيق التغييرات');
+                                    }}
+                                    className="w-full py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <i className="fa-solid fa-save"></i>
+                                    <span>حفظ وإغلاق</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div id="floating-menu" className={isFloatingMenuOpen ? 'open' : ''} ref={floatingMenuRef}>
                  <button onClick={() => { openModal('bookmarks-modal'); setIsFloatingMenuOpen(false); }} className="bottom-bar-button btn-green w-full justify-between mb-2" style={getToolbarStyle('btn-bookmarks-list', currentTheme.btnBg, currentTheme.btnText, currentTheme.btnBg)}><span>قائمة الإشارات</span><i className="fa-solid fa-list"></i></button>
                  {!initialLandscape && (
