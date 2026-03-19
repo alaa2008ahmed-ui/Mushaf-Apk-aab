@@ -11,7 +11,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         
-        // --- التعديل الجديد للتوافق مع جوجل بلاي ---
+        // --- التعديل الذي وضعته أنت ---
         versionCode 4
         versionName "1.0.3"
         // ----------------------------------------
@@ -25,7 +25,12 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            // 1. حل تحذير رموز تصحيح الأخطاء (Native Debug Symbols)
+            ndk {
+                debugSymbolLevel 'SYMBOL_TABLE'
+            }
+            // 2. تفعيل حماية الكود وحل تحذير ملف الـ Mapping
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
