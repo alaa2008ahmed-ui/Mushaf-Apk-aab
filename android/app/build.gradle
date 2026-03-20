@@ -12,8 +12,8 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         
         // --- التعديل الذي وضعته أنت ---
-        versionCode 4
-        versionName "1.0.3"
+        versionCode 5
+        versionName "1.0.4"
         // ----------------------------------------
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
