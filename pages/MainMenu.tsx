@@ -554,21 +554,6 @@ function MainMenu({ onNavigate, onOpenThemes, onOpenSideMenu }) {
               {/* Footer/Save Button */}
               {!isEditMode && (
                   <div className="flex flex-col gap-2 w-full max-w-sm mx-auto mt-1 mb-4">
-                      {/* Dua Card */}
-                      <div className="flex items-center justify-center gap-2 h-12">
-                          {!showVoiceIcon && (
-                              <div className="flex items-center justify-center shrink-0">
-                                  <WhatsAppButton />
-                              </div>
-                          )}
-                          <div className="themed-card p-1 rounded-2xl text-center flex-1 relative h-full flex flex-col justify-center overflow-hidden">
-                              <FloatingNeonTicker />
-                              <p className={`${!showVoiceIcon ? 'text-[14px]' : 'text-[16px]'} font-bold leading-tight`} style={{ color: theme.bgColor === '#000000' ? '#FFFFFF' : (themeKey === 'default' ? '#a855f7' : (themeKey === 'olive_grove' ? '#65A30D' : theme.textColor)) }}>
-                                  اللهم ارحمهما واغفر لهما واجعل مثواهما الجنة
-                              </p>
-                          </div>
-                      </div>
-
                       {/* Prayer Status Cards */}
                       <div 
                           className="p-2 rounded-2xl shadow-lg border-2 transition-all duration-300" 
@@ -777,6 +762,20 @@ function MainMenu({ onNavigate, onOpenThemes, onOpenSideMenu }) {
                           </div>
                       </div>
 
+                      {/* Dua Card */}
+                      <div className="flex items-center justify-center gap-2 h-12 mt-3">
+                          {!showVoiceIcon && (
+                              <div className="flex items-center justify-center shrink-0">
+                                  <WhatsAppButton />
+                              </div>
+                          )}
+                          <div className="themed-card p-1 rounded-2xl text-center flex-1 relative h-full flex flex-col justify-center overflow-hidden">
+                              <FloatingNeonTicker />
+                              <p className={`${!showVoiceIcon ? 'text-[14px]' : 'text-[16px]'} font-bold leading-tight`} style={{ color: theme.bgColor === '#000000' ? '#FFFFFF' : (themeKey === 'default' ? '#a855f7' : (themeKey === 'olive_grove' ? '#65A30D' : theme.textColor)) }}>
+                                  اللهم ارحمهما واغفر لهما واجعل مثواهما الجنة
+                              </p>
+                          </div>
+                      </div>
                   </div>
               )}
           </div>
