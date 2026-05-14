@@ -68,7 +68,7 @@
     bottom: calc(var(--logical-safe-bottom) + 2px);
     left: calc(var(--logical-safe-left) + 2px);
     right: calc(var(--logical-safe-right) + 2px);
-    border: 8px double var(--quran-border-color, #000);
+    border: 6px double var(--quran-border-color, #000);
     pointer-events: none;
     z-index: 100;
 }
