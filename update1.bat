@@ -29,7 +29,7 @@ if %ERRORLEVEL% neq 0 goto :error
 
 echo [5/7] Setting up Git...
 git remote remove origin >nul 2>&1
-git remote add origin https://github.com/alaa2008ahmed-ui/-mushaf-al---.git
+git remote add origin https://github.com/alaa2008ahmed-ui/mushaf-al.git
 
 echo [6/7] Committing with your name...
 git add .
