@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronLeft, Search, BookOpen, Sun, Moon, Heart, X } from 'lucide-react';
+import { Keyboard } from '@capacitor/keyboard';
+import { Capacitor } from '@capacitor/core';
 import { useTheme } from '../context/ThemeContext';
 import { quranData } from '../utils/quranData';
 import { THEMES, toArabic } from '../components/QuranReader/constants';
@@ -71,6 +73,22 @@ interface GlobalSearchProps {
 const GlobalSearch: React.FC<GlobalSearchProps> = ({ onBack, onNavigate }) => {
     const { setCurrentPage } = useTheme();
     const [readerTheme, setReaderTheme] = useState(getReaderTheme());
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+    useEffect(() => {
+        if (Capacitor.isNativePlatform()) {
+            const showListener = Keyboard.addListener('keyboardWillShow', info => {
+                setKeyboardHeight(info.keyboardHeight);
+            });
+            const hideListener = Keyboard.addListener('keyboardWillHide', () => {
+                setKeyboardHeight(0);
+            });
+            return () => {
+                showListener.then(l => l.remove());
+                hideListener.then(l => l.remove());
+            };
+        }
+    }, []);
     
     useEffect(() => {
         setCurrentPage('quran_search');
@@ -889,7 +907,14 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ onBack, onNavigate }) => {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto px-4 py-4" dir="rtl" style={{ backgroundColor: theme.bgColor }}>
+                <div 
+                    className="flex-1 overflow-y-auto px-4 py-4" 
+                    dir="rtl" 
+                    style={{ 
+                        backgroundColor: theme.bgColor,
+                        paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 20}px` : '1rem'
+                    }}
+                >
                     {renderResults()}
                 </div>
 

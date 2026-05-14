@@ -8,6 +8,10 @@ const config: CapacitorConfig = {
     androidScheme: 'https'
   },
   plugins: {
+    Keyboard: {
+      resize: 'none' as any,
+      style: 'dark' as any,
+    },
     LocalNotifications: {
       smallIcon: "ic_stat_name",
       iconColor: "#488AFF",

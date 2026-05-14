@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toArabic } from './constants';
 import { X } from 'lucide-react';
+import { Keyboard } from '@capacitor/keyboard';
+import { Capacitor } from '@capacitor/core';
 import { renderTajweedTextHtml } from './MushafPage';
 
 interface SearchModalProps {
@@ -15,6 +17,23 @@ interface SearchModalProps {
 
 const SearchModal: React.FC<SearchModalProps> = ({ quranData, onSelect, onClose, isLandscape, initialQuery, readingMode = 'mushaf', currentTheme }) => {
     const modeSuffix = readingMode === 'mushaf' ? (isLandscape ? '_h' : '_v') : `_${readingMode}_${isLandscape ? 'h' : 'v'}`;
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+    useEffect(() => {
+        if (Capacitor.isNativePlatform()) {
+            const showListener = Keyboard.addListener('keyboardWillShow', info => {
+                setKeyboardHeight(info.keyboardHeight);
+            });
+            const hideListener = Keyboard.addListener('keyboardWillHide', () => {
+                setKeyboardHeight(0);
+            });
+            return () => {
+                showListener.then(l => l.remove());
+                hideListener.then(l => l.remove());
+            };
+        }
+    }, []);
+
     const [query, setQuery] = useState(() => initialQuery || localStorage.getItem('search_query' + modeSuffix) || '');
     const [results, setResults] = useState<any[]>(() => {
         const saved = localStorage.getItem('search_results' + modeSuffix);
@@ -267,7 +286,13 @@ const SearchModal: React.FC<SearchModalProps> = ({ quranData, onSelect, onClose,
                         <div className="text-xs text-center mt-2 font-bold opacity-60" style={{ color: currentTheme?.text }}>{searchStats}</div>
                     </div>
 
-                    <div className={`flex-1 overflow-y-auto p-4 relative space-y-2 scrollbar-hide`} style={{ backgroundColor: currentTheme?.bg || '#ffffff' }}>
+                    <div 
+                        className={`flex-1 overflow-y-auto p-4 relative space-y-2 scrollbar-hide`} 
+                        style={{ 
+                            backgroundColor: currentTheme?.bg || '#ffffff',
+                            paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 20}px` : '1rem'
+                        }}
+                    >
                     {isSearching && (
                         <div className="text-center mt-8">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto"></div>
