@@ -21,6 +21,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ quranData, onSelect, onClose,
 
     useEffect(() => {
         if (Capacitor.isNativePlatform()) {
+            Keyboard.setScroll({ scroll: false });
             const showListener = Keyboard.addListener('keyboardWillShow', info => {
                 setKeyboardHeight(info.keyboardHeight);
             });
@@ -241,7 +242,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ quranData, onSelect, onClose,
     };
 
     return (
-        <div className="fixed z-[1200] bg-black/40 backdrop-blur-sm flex items-center justify-center overflow-hidden" style={{ top: 0, bottom: 0, left: 0, right: 0 }} dir="rtl" onClick={onClose}>
+        <div className="fixed z-[1200] flex items-center justify-center overflow-hidden" style={{ top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.5)' }} dir="rtl" onClick={onClose}>
             <div className="w-full h-full flex flex-col overflow-hidden shadow-none border-[4px]" style={{ backgroundColor: currentTheme?.bg || '#ffffff', borderColor: currentTheme?.accent || '#3b82f6' }} onClick={e => e.stopPropagation()}>
                 <div className="flex-1 w-full flex flex-col overflow-hidden" style={{ color: currentTheme?.text || '#000000' }}>
                     
