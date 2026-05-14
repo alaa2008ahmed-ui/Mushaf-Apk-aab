@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { presetThemes } from '../context/themes';
 
 function ThemeSelector({ onClose, isLandscape }: { onClose: () => void, isLandscape?: boolean }) {
-    const { theme, themeKey, applyPresetTheme, setCustomBackground, resetBackground, toggleTopBars, showTopBars } = useTheme();
+    const { theme, themeKey, applyPresetTheme, setCustomBackground, resetBackground } = useTheme();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -23,6 +23,19 @@ function ThemeSelector({ onClose, isLandscape }: { onClose: () => void, isLandsc
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [wrapperRef, onClose]);
+
+    useEffect(() => {
+        // Scroll to the active theme button after render (Instant jump)
+        if (themeKey) {
+            const timer = setTimeout(() => {
+                const activeButton = wrapperRef.current?.querySelector(`[data-theme-key="${themeKey}"]`);
+                if (activeButton) {
+                    activeButton.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+                }
+            }, 10);
+            return () => clearTimeout(timer);
+        }
+    }, [themeKey]);
 
     const handleBgUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files[0]) {
@@ -44,7 +57,7 @@ function ThemeSelector({ onClose, isLandscape }: { onClose: () => void, isLandsc
         >
             <div className={`themed-card p-4 ${isLandscape ? 'w-full max-w-4xl h-full rounded-none' : 'rounded-3xl'} shadow-2xl !backdrop-blur-md !bg-opacity-95 flex flex-col justify-center border-2`} style={{ backgroundColor: theme.bgColor || '#fff', borderColor: theme.palette[0] + '40' }}>
                 <div className={isLandscape ? 'max-w-lg mx-auto w-full' : 'w-full'}>
-                    <div className="grid grid-cols-4 gap-1.5 mb-4">
+                    <div className="grid grid-cols-3 gap-1.5 mb-4">
                         <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-xl font-bold text-[10px] flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95 shadow-sm" style={{backgroundColor: theme.palette[0] + '20', color: theme.textColor, borderWidth: '1px', borderStyle: 'solid', borderColor: theme.palette[0] + '40'}}>
                             <span className="text-lg">🖼️</span>
                             <span>خلفية</span>
@@ -53,13 +66,9 @@ function ThemeSelector({ onClose, isLandscape }: { onClose: () => void, isLandsc
                             <span className="text-lg">🔄</span>
                             <span>استعادة</span>
                         </button>
-                        <button onClick={() => { applyPresetTheme('default'); onClose(); }} className="p-2 rounded-xl font-bold text-[10px] flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95 shadow-sm" style={{backgroundColor: theme.palette[2] + '20', color: theme.textColor, borderWidth: '1px', borderStyle: 'solid', borderColor: theme.palette[2] + '40'}}>
+                        <button data-theme-key="default" onClick={() => { applyPresetTheme('default'); onClose(); }} className="p-2 rounded-xl font-bold text-[10px] flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95 shadow-sm" style={{backgroundColor: theme.palette[2] + '20', color: theme.textColor, borderWidth: '1px', borderStyle: 'solid', borderColor: theme.palette[2] + '40'}}>
                             <span className="text-lg">🎨</span>
                             <span>الافتراضي</span>
-                        </button>
-                        <button onClick={toggleTopBars} className="p-2 rounded-xl font-bold text-[10px] flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95 shadow-sm" style={{backgroundColor: (theme.palette[3] || theme.palette[0]) + '20', color: theme.textColor, borderWidth: '1px', borderStyle: 'solid', borderColor: (theme.palette[3] || theme.palette[0]) + '40'}}>
-                            <span className="text-lg">{showTopBars ? '🙈' : '👁️'}</span>
-                            <span className="text-center">{showTopBars ? 'إخفاء الأشرطة' : 'إظهار الأشرطة'}</span>
                         </button>
                     </div>
 
@@ -69,10 +78,10 @@ function ThemeSelector({ onClose, isLandscape }: { onClose: () => void, isLandsc
                         {Object.entries(presetThemes).filter(([key]) => key !== 'default').map(([key, themeOption], index) => (
                             <button
                                 key={key}
+                                data-theme-key={key}
                                 onClick={() => { applyPresetTheme(key); onClose(); }}
                                 className="theme-selector-button w-[85px] h-14 rounded-xl border-2 text-[10px] font-bold flex items-center justify-center text-center shadow-sm transition-all active:scale-95 hover:brightness-110"
                                     style={{
-                                        animationDelay: `${index * 0.03}s`,
                                         backgroundColor: themeOption.bgColor || '#fff',
                                         backgroundSize: 'cover',
                                         color: themeOption.textColor || '#000',

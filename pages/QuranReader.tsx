@@ -35,10 +35,10 @@ import FloatingMenu from '../components/QuranReader/FloatingMenu';
 import AyahContextMenu from '../components/QuranReader/AyahContextMenu';
 import ShareAyahModal from '../components/QuranReader/ShareAyahModal';
 import TutorialOverlay, { TutorialStep } from '../components/Tutorial/TutorialOverlay';
-import { MousePointer2, Move, ZoomIn, Grid, Mic, Bookmark, Home, Share2, BookOpen, Trophy, Play, Menu } from 'lucide-react';
+import { MousePointer2, Move, ZoomIn, Grid, Mic, Bookmark, Home, Share2, BookOpen, Trophy, Play, Menu, Palette } from 'lucide-react';
 import { quranData as quranJsonData } from '../utils/quranData';
 import ReviewTestModal from '../components/QuranReader/ReviewTestModal';
-import { memorizationService } from '../src/services/memorizationService';
+import { memorizationService } from '../services/memorizationService';
 import { registerBackInterceptor } from '../hooks/useBackButton';
 import { parseVoiceCommand, normalizeArabic } from '../utils/voiceParser';
 import { useTheme } from '../context/ThemeContext';
@@ -153,7 +153,11 @@ const WirdCompletionModal = ({ isOpen, onClose, onGoToWird, onGoHome, currentThe
                     <button 
                         onClick={onGoHome}
                         className="w-full py-3 rounded-xl font-bold text-sm transition-transform hover:scale-105 flex items-center justify-center gap-2"
-                        style={{ backgroundColor: `${currentTheme?.barBg}80`, color: currentTheme?.barText, border: `1px solid ${currentTheme?.barBorder}` }}
+                        style={currentTheme?.bg === '#000000' ? {
+                            backgroundColor: '#000000',
+                            color: '#FFFFFF',
+                            border: '1px solid #FFFFFF'
+                        } : { backgroundColor: `${currentTheme?.barBg}80`, color: currentTheme?.barText, border: `1px solid ${currentTheme?.barBorder}` }}
                     >
                         <i className="fa-solid fa-house"></i>
                         الصفحة الرئيسية
@@ -199,7 +203,7 @@ const ResumeSessionModal = ({ isOpen, onClose, onResume, onStartNew, currentThem
 };
 
 const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: string) => void, onOpenThemes?: () => void, initialLandscape?: boolean, initialSurah?: number, initialAyah?: number, initialPage?: number, isWirdMode?: boolean, isMemorizationMode?: boolean, memorizationSettings?: any, navParams?: any }> = ({ page, onBack, onNavigate, onOpenThemes, initialLandscape = false, initialSurah, initialAyah, initialPage, isWirdMode = false, isMemorizationMode = false, memorizationSettings, navParams }) => {
-    const { setCurrentPage, isGlobalTheme } = useTheme();
+    const { setCurrentPage, isGlobalTheme, themeKey } = useTheme();
 
     const [isLandscape, setIsLandscape] = useState(initialLandscape);
 
@@ -270,7 +274,17 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
             const height = window.innerHeight;
             
             // Use matchMedia for more reliable orientation detection that ignores keyboard height
-            const isL = window.matchMedia("(orientation: landscape)").matches;
+            let isL = window.matchMedia("(orientation: landscape)").matches;
+            
+            // Only auto-switch to landscape mode on mobile/native devices. 
+            // On desktop/preview, a wide window shouldn't force the mobile landscape reading UI 
+            // which hides toolbars and share buttons.
+            if (!Capacitor.isNativePlatform()) {
+                const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                if (!isMobileUA) {
+                    isL = false; // Always default to portrait in desktop preview so toolbars/share buttons appear normally
+                }
+            }
             
             if (isL !== isLandscapeRef.current) {
                 setIsLandscape(isL);
@@ -873,6 +887,9 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
         return () => {
             const unlockOrientation = async () => {
                 try {
+                    if (Capacitor.isNativePlatform()) {
+                        await ScreenOrientation.lock({ orientation: 'portrait' });
+                    }
                     await ScreenOrientation.unlock();
                 } catch (e) {
                     console.log('Screen orientation unlock failed', e);
@@ -1374,6 +1391,13 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
             icon: <Move className="w-8 h-8 text-white" />
         },
         {
+            id: 'surah-design',
+            title: 'تصميم رأس السورة',
+            text: 'يوجد مجموعة متنوعة من التصميمات المختلفة والمميزة لرأس السورة. يمكنك الضغط مطولاً على اسم السورة لتغيير التصميم واختيار ما يناسب ذوقك الخاص.',
+            selector: '#surah-header-container',
+            icon: <Palette className="w-8 h-8 text-white" />
+        },
+        {
             id: 'audio-play',
             title: 'التشغيل الصوتي واختيار القراء',
             text: 'اضغط هنا لبدء الاستماع لتلاوة عطرة للآيات. الضغط المطول على هذا الزر يفتح لك قائمة بمجموعة كبيرة من القراء من مشاهير القراء، حيث يمكنك اختيار قارئك المفضل وتحديد جودة الصوت.',
@@ -1778,6 +1802,9 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
     const playAudio = useCallback(async (s: number, a: number, isLinked = false, targetAyah?: {s: number, a: number}) => {
         stopAudio();
         setIsAudioLoading(true);
+
+        const reader = localIsMemorizationMode && memorizationSettingsRef.current ? memorizationSettingsRef.current.reader : settings.reader;
+
         setPlayingAyah({ s, a });
         setCurrentAyah({ s, a });
         setHighlightedAyahId(`ayah-${s}-${a}`);
@@ -2520,8 +2547,8 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
         root.style.setProperty('--qr-bar-border', t.barBorder);
         root.style.setProperty('--qr-btn-bg', t.btnBg);
         root.style.setProperty('--qr-btn-text', t.btnText);
-        root.style.setProperty('--qr-accent', t.accent);
-        root.style.setProperty('--qr-accent-text', t.accentText);
+        root.style.setProperty('--qr-accent', t.accent || (t as any).palette?.[0]);
+        root.style.setProperty('--qr-accent-text', t.accentText || '#ffffff');
         root.style.setProperty('--qr-modal-bg', t.modalBg);
         root.style.setProperty('--qr-modal-text', t.modalText);
         root.style.setProperty('--qr-header-bg', t.headerBg);
@@ -2530,18 +2557,18 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
         root.style.setProperty('--qr-card-text', t.cardText);
         root.style.setProperty('--qr-card-border', t.cardBorder);
         root.style.setProperty('--qr-sajdah', t.sajdah);
-        root.style.setProperty('--qr-highlight-text', settings.highlightTextColor || (t as any).highlightText || t.accent);
+        root.style.setProperty('--qr-highlight-text', settings.highlightTextColor || (t as any).highlightText || t.accent || (t as any).palette?.[0]);
 
         root.style.setProperty('--color-sajdah', t.sajdah);
         root.style.setProperty('--search-result-bg', t.cardBg);
-        root.style.setProperty('--search-result-border', t.accent);
+        root.style.setProperty('--search-result-border', t.accent || (t as any).palette?.[0]);
         root.style.setProperty('--search-result-text', t.cardText);
         
         const darkBgs = ['#000000', '#2c241b', '#101010', '#0f172a', '#2e1065', '#064e3b', '#1e293b', '#4c1d95', '#1e1b4b', '#451a03'];
         const isDark = (settings.bgColor || t.bg) && darkBgs.includes((settings.bgColor || t.bg).toLowerCase());
         if (isDark) document.documentElement.classList.add('dark');
         else document.documentElement.classList.remove('dark');
-    }, [currentTheme, settings.highlightTextColor, settings.textColor, settings.bgColor, settings.fontFamily]);
+    }, [currentTheme, themeKey, settings.highlightTextColor, settings.textColor, settings.bgColor, settings.fontFamily]);
 
     const isBookmarksModalOpen = activeModals.includes('bookmarks-modal');
     useEffect(() => {
@@ -2555,48 +2582,50 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
         if (!contentEl) return;
     
         const handleScroll = () => {
-            if (isJumpingRef.current || readingMode !== 'mushaf') return;
+            if (isJumpingRef.current) return;
 
             const { scrollTop, scrollHeight, clientHeight } = contentEl;
 
-            if (scrollTop < 500) {
-                setVisiblePages(prev => {
-                    if (prev.length === 0) return prev;
-                    const firstPage = Math.min(...prev);
-                    if (firstPage > 1) {
-                        const newPage = firstPage - 1;
-                        if (!prev.includes(newPage)) {
-                            return [newPage, ...prev].sort((a, b) => a - b);
+            if (readingMode === 'mushaf') {
+                if (scrollTop < 500) {
+                    setVisiblePages(prev => {
+                        if (prev.length === 0) return prev;
+                        const firstPage = Math.min(...prev);
+                        if (firstPage > 1) {
+                            const newPage = firstPage - 1;
+                            if (!prev.includes(newPage)) {
+                                return [newPage, ...prev].sort((a, b) => a - b);
+                            }
                         }
-                    }
-                    return prev;
-                });
-            }
-            if (scrollHeight - scrollTop <= clientHeight + 800) {
-                setVisiblePages(prev => {
-                    if (prev.length === 0) return prev;
-                    const lastPage = Math.max(...prev);
-                    if (lastPage < 604) {
-                        const newPage = lastPage + 1;
-                        if (!prev.includes(newPage)) {
-                            return [...prev, newPage].sort((a, b) => a - b);
+                        return prev;
+                    });
+                }
+                if (scrollHeight - scrollTop <= clientHeight + 800) {
+                    setVisiblePages(prev => {
+                        if (prev.length === 0) return prev;
+                        const lastPage = Math.max(...prev);
+                        if (lastPage < 604) {
+                            const newPage = lastPage + 1;
+                            if (!prev.includes(newPage)) {
+                                return [...prev, newPage].sort((a, b) => a - b);
+                            }
                         }
-                    }
-                    return prev;
-                });
+                        return prev;
+                    });
+                }
             }
     
             const now = Date.now();
-            if (now - lastScrollUpdateTime.current < 100) return;
+            if (now - lastScrollUpdateTime.current < 50) return; // More frequent updates
             lastScrollUpdateTime.current = now;
     
             const x = window.innerWidth / 2;
-            const y = window.innerHeight / 4;
+            const y = window.innerHeight / 2;
             
             const el = document.elementFromPoint(x, y);
             if (!el) return;
             
-            const ayahBlock = el.closest('.ayah-text-block');
+            const ayahBlock = el.closest('.ayah-text-block, .ayah-item');
             if (ayahBlock && ayahBlock.id) {
                 const parts = ayahBlock.id.split('-');
                 if (parts.length === 3) {
@@ -2614,7 +2643,9 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
                         }
                         
                         setCurrentAyah({ s, a });
-                        localStorage.setItem(`last_pos${posSuffix}`, JSON.stringify({ s, a }));
+                        localStorage.setItem(`last_pos${posSuffix}`, JSON.stringify({ s, a })); 
+                        localStorage.setItem("last_read_ayah_global", JSON.stringify({ s, a, ts: Date.now() }));
+                        window.dispatchEvent(new Event('last_read_update'));
 
                         // Detect Surah change
                         /* 
@@ -3314,6 +3345,19 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
     };
 
     const getToolbarStyle = (type: string, defaultBg: string, defaultText: string, defaultBorder: string) => {
+        const isBlackTheme = currentTheme?.bg === '#000000';
+        if (isBlackTheme && type === 'btn-home') {
+            return {
+                backgroundColor: '#000000',
+                color: '#FFFFFF',
+                border: '1px solid #FFFFFF',
+                fontFamily: toolbarColors[type]?.font || 'inherit',
+                opacity: 1,
+                backdropFilter: 'none',
+                WebkitBackdropFilter: 'none'
+            };
+        }
+
         const config = toolbarColors[type];
         let bg = config?.bg || defaultBg || "#ffffff";
         let border = config?.border || defaultBorder || "#e5e7eb";
@@ -3453,7 +3497,9 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
     const handleVerticalAyahClick = useCallback((s: number, a: number) => {
         setCurrentAyah({ s, a });
         setHighlightedAyahId(`ayah-${s}-${a}`);
-        localStorage.setItem(`last_pos${posSuffix}`, JSON.stringify({ s, a }));
+        localStorage.setItem(`last_pos${posSuffix}`, JSON.stringify({ s, a })); 
+        localStorage.setItem("last_read_ayah_global", JSON.stringify({ s, a, ts: Date.now() }));
+        window.dispatchEvent(new Event('last_read_update'));
     }, [posSuffix]);
 
     const sortedVisiblePages = useMemo(() => {
@@ -3575,7 +3621,9 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
                                 if (isJumpingRef.current) return;
                                 if (s !== currentAyahRef.current.s || a !== currentAyahRef.current.a) {
                                     setCurrentAyah({ s, a });
-                                    localStorage.setItem(`last_pos${posSuffix}`, JSON.stringify({ s, a }));
+                                    localStorage.setItem(`last_pos${posSuffix}`, JSON.stringify({ s, a })); 
+                                    localStorage.setItem("last_read_ayah_global", JSON.stringify({ s, a, ts: Date.now() }));
+                                    window.dispatchEvent(new Event('last_read_update'));
                                 }
                             }}
                             showMarkerNotification={showMarkerNotification}

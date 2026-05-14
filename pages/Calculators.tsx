@@ -7,10 +7,10 @@ import MawarithCalculator from '../components/Calculators/MawarithCalculator';
 import KaffaratCalculator from '../components/Calculators/KaffaratCalculator';
 
 interface CalculatorsProps {
-    onBack: () => void;
+    onBack: () => void; onNavigate: (id: string, params?: any) => void; 
 }
 
-const Calculators: React.FC<CalculatorsProps> = ({ onBack }) => {
+const Calculators: React.FC<CalculatorsProps> = ({ onBack , onNavigate }) => {
     const { theme, themeKey } = useTheme();
     const [activeTab, setActiveTab] = useState<'zakat' | 'mawarith' | 'kaffarat'>('zakat');
 
@@ -57,7 +57,7 @@ const Calculators: React.FC<CalculatorsProps> = ({ onBack }) => {
             </div>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto p-4 pb-4 hide-scrollbar font-cairo bg-gray-50/50 dark:bg-black/20">
+            <main className="flex-1 overflow-y-auto px-4 pb-4 hide-scrollbar font-cairo bg-gray-50/50 dark:bg-black/20">
                 <div className="max-w-3xl mx-auto">
                     {activeTab === 'zakat' && <ZakatCalculator />}
                     {activeTab === 'mawarith' && <MawarithCalculator />}

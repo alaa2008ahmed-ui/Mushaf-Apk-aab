@@ -151,7 +151,7 @@ const MushafPage: React.FC<MushafPageProps> = React.memo(({ pageNum, pageData, h
             case 'night_sky': return { num: '#9333ea', bracket: '#9333ea' }; // Purple for both
             case 'green': return { num: '#dc2626', bracket: '#dc2626' }; // Red for both
             case 'red': return { num: '#2563eb', bracket: '#2563eb' }; // Blue for both
-            case 'deep_black': return { num: '#f59e0b', bracket: '#f59e0b' }; // Orange for both
+            case 'deep_black': return { num: '#10B981', bracket: '#10B981' }; // Turquoise Green for both
             default: return { 
                 num: numColor, 
                 bracket: bracketColor 

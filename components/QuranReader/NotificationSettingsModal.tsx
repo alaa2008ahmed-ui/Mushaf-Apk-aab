@@ -139,26 +139,27 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({ o
     return (
         <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-[1200] flex items-center justify-center ${isLandscape ? 'p-0' : 'p-4'} animate-fadeIn`} onClick={onClose}>
             <div className={`modal-skinned w-full ${isLandscape ? 'max-w-4xl h-full rounded-none max-h-screen' : 'max-w-md rounded-2xl max-h-[85vh]'} shadow-2xl overflow-hidden flex flex-col animate-modal-enter`} onClick={e => e.stopPropagation()}>
-                <div className="theme-header-bg p-4 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        <Bell className="w-5 h-5" />
-                        <h3 className="font-bold text-lg">الإشعارات</h3>
-                    </div>
-                    <button onClick={onClose} className="p-1 hover:bg-black/10 rounded-full transition-colors">
-                        <X className="w-6 h-6" />
-                    </button>
-                </div>
 
                 <div className="flex border-b border-gray-200 dark:border-gray-700">
                     <button 
-                        className={`flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${activeTab === 'app' ? 'text-emerald-500 border-b-2 border-emerald-500' : 'opacity-60'}`}
+                        className="flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors"
+                        style={{ 
+                            color: activeTab === 'app' ? 'var(--qr-accent)' : undefined, 
+                            borderBottom: activeTab === 'app' ? '2px solid var(--qr-accent)' : 'none',
+                            opacity: activeTab === 'app' ? 1 : 0.6
+                        }}
                         onClick={() => setActiveTab('app')}
                     >
                         <AppWindow className="w-4 h-4" />
                         إشعارات التطبيق
                     </button>
                     <button 
-                        className={`flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${activeTab === 'phone' ? 'text-emerald-500 border-b-2 border-emerald-500' : 'opacity-60'}`}
+                        className="flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors"
+                        style={{ 
+                            color: activeTab === 'phone' ? 'var(--qr-accent)' : undefined, 
+                            borderBottom: activeTab === 'phone' ? '2px solid var(--qr-accent)' : 'none',
+                            opacity: activeTab === 'phone' ? 1 : 0.6
+                        }}
                         onClick={() => setActiveTab('phone')}
                     >
                         <Smartphone className="w-4 h-4" />
@@ -186,24 +187,23 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({ o
                                     onClick={() => toggleAppSetting(item.id)}
                                     className={`flex items-center justify-between p-3 rounded-xl border-2 transition-all cursor-pointer ${
                                         appSettings[item.id] 
-                                        ? 'themed-card-bg border-emerald-500 shadow-sm' 
+                                        ? 'themed-card-bg shadow-sm' 
                                         : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 opacity-60'
                                     }`}
+                                    style={{ borderColor: appSettings[item.id] ? 'var(--qr-accent)' : undefined }}
                                 >
                                     <div className="flex flex-col gap-0.5">
                                         <span className="font-bold text-sm">{item.label}</span>
                                         <span className="text-[10px] opacity-60">{item.desc}</span>
                                     </div>
-                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
-                                        appSettings[item.id] ? 'bg-emerald-500 text-white' : 'bg-gray-300 dark:bg-gray-600'
-                                    }`}>
+                                    <div className="w-5 h-5 rounded-full flex items-center justify-center transition-colors" style={{ backgroundColor: appSettings[item.id] ? 'var(--qr-accent)' : undefined, color: appSettings[item.id] ? 'var(--qr-accent-text, #fff)' : undefined }}>
                                         {appSettings[item.id] && <Check className="w-3 h-3" />}
                                     </div>
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <div className="space-y-4 animate-fadeIn pb-8">
+                        <div className="space-y-4 animate-fadeIn pb-16">
                             <p className="text-xs opacity-70 text-center mb-2">
                                 إشعارات تظهر على شاشة الهاتف حتى لو كان التطبيق مغلقاً
                             </p>
@@ -222,17 +222,16 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({ o
                                             onClick={() => toggleNightNotification(item.id as 'firstThird' | 'midnight' | 'lastThird')}
                                             className={`flex items-center justify-between p-3 rounded-xl border-2 transition-all cursor-pointer ${
                                                 isEnabled 
-                                                ? 'themed-card-bg border-emerald-500 shadow-sm' 
+                                                ? 'themed-card-bg shadow-sm' 
                                                 : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 opacity-60'
                                             }`}
+                                            style={{ borderColor: isEnabled ? 'var(--qr-accent)' : undefined }}
                                         >
                                             <div className="flex flex-col gap-0.5">
                                                 <span className="font-bold text-sm">{item.label}</span>
                                                 <span className="text-[10px] opacity-60">{item.desc}</span>
                                             </div>
-                                            <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
-                                                isEnabled ? 'bg-emerald-500 text-white' : 'bg-gray-300 dark:bg-gray-600'
-                                            }`}>
+                                            <div className="w-5 h-5 rounded-full flex items-center justify-center transition-colors" style={{ backgroundColor: isEnabled ? 'var(--qr-accent)' : undefined, color: isEnabled ? 'var(--qr-accent-text, #fff)' : undefined }}>
                                                 {isEnabled && <Check className="w-3 h-3" />}
                                             </div>
                                         </div>
@@ -256,18 +255,17 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({ o
                                             key={item.id}
                                             className={`p-3 rounded-xl border-2 transition-all ${
                                                 setting.enabled 
-                                                ? 'themed-card-bg border-emerald-500 shadow-sm' 
+                                                ? 'themed-card-bg shadow-sm' 
                                                 : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 opacity-60'
                                             }`}
+                                            style={{ borderColor: setting.enabled ? 'var(--qr-accent)' : undefined }}
                                         >
                                             <div className="flex items-center justify-between mb-2">
                                                 <div 
                                                     className="flex items-center gap-2 cursor-pointer"
                                                     onClick={() => togglePhoneSetting(item.id as keyof Omit<PhoneNotificationSettings, 'randomAthkar'>)}
                                                 >
-                                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
-                                                        setting.enabled ? 'bg-emerald-500 text-white' : 'bg-gray-300 dark:bg-gray-600'
-                                                    }`}>
+                                                    <div className="w-5 h-5 rounded-full flex items-center justify-center transition-colors" style={{ backgroundColor: setting.enabled ? 'var(--qr-accent)' : undefined, color: setting.enabled ? 'var(--qr-accent-text, #fff)' : undefined }}>
                                                         {setting.enabled && <Check className="w-3 h-3" />}
                                                     </div>
                                                     <span className="font-bold text-sm">{item.label}</span>
@@ -280,7 +278,8 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({ o
                                                             type="time" 
                                                             value={setting.time}
                                                             onChange={(e) => handleTimeChange(item.id as keyof Omit<PhoneNotificationSettings, 'randomAthkar'>, e.target.value)}
-                                                            className="bg-transparent border-none outline-none font-bold text-emerald-600 dark:text-emerald-400"
+                                                            className="bg-transparent border-none outline-none font-bold dark:[color-scheme:dark]"
+                                                            style={{ color: 'var(--qr-accent)' }}
                                                         />
                                                     </div>
                                                 )}
@@ -317,14 +316,14 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({ o
                                             <div className="flex items-center gap-3">
                                                 <button 
                                                     onClick={() => handleRandomSettingChange({ frequency: Math.max(1, phoneSettings.randomAthkar.frequency - 1) })}
-                                                    className="w-6 h-6 rounded-md bg-gray-100 dark:bg-gray-800 flex items-center justify-center font-bold"
+                                                    className="w-6 h-6 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 flex items-center justify-center font-bold"
                                                 >
                                                     -
                                                 </button>
                                                 <span className="text-sm font-bold text-emerald-600">{toArabic(phoneSettings.randomAthkar.frequency)}</span>
                                                 <button 
                                                     onClick={() => handleRandomSettingChange({ frequency: Math.min(20, phoneSettings.randomAthkar.frequency + 1) })}
-                                                    className="w-6 h-6 rounded-md bg-gray-100 dark:bg-gray-800 flex items-center justify-center font-bold"
+                                                    className="w-6 h-6 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 flex items-center justify-center font-bold"
                                                 >
                                                     +
                                                 </button>
@@ -338,7 +337,7 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({ o
                                                     type="time" 
                                                     value={phoneSettings.randomAthkar.startTime}
                                                     onChange={(e) => handleRandomSettingChange({ startTime: e.target.value })}
-                                                    className="w-full text-xs bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-2 rounded-lg font-bold"
+                                                    className="w-full text-xs bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 p-2 rounded-lg font-bold dark:[color-scheme:dark]"
                                                 />
                                             </div>
                                             <div className="space-y-1">
@@ -347,7 +346,7 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({ o
                                                     type="time" 
                                                     value={phoneSettings.randomAthkar.endTime}
                                                     onChange={(e) => handleRandomSettingChange({ endTime: e.target.value })}
-                                                    className="w-full text-xs bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-2 rounded-lg font-bold"
+                                                    className="w-full text-xs bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 p-2 rounded-lg font-bold dark:[color-scheme:dark]"
                                                 />
                                             </div>
                                         </div>

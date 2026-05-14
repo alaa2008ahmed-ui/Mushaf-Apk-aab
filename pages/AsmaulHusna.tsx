@@ -1,12 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { registerBackInterceptor } from '../hooks/useBackButton';
 import { motion, AnimatePresence } from 'motion/react';
 import BottomBar from '../components/BottomBar';
 import ThemePageLock from '../components/ThemePageLock';
 import { asmaulHusna, AsmaulHusnaItem } from '../data/asmaulHusnaData';
 import { X, Info, Book } from 'lucide-react';
 
-const AsmaulHusna: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+const AsmaulHusna: React.FC<{ onBack: () => void, onNavigate: (id: string, params?: any) => void; }> = ({ onBack, onNavigate }) => {
     const [selectedName, setSelectedName] = useState<AsmaulHusnaItem | null>(null);
 
     const handleHomeClick = () => {
@@ -16,6 +17,18 @@ const AsmaulHusna: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             onBack();
         }
     };
+
+    useEffect(() => {
+        const interceptor = () => {
+            if (selectedName) {
+                setSelectedName(null);
+                return true;
+            }
+            return false;
+        };
+        const unregister = registerBackInterceptor(interceptor);
+        return unregister;
+    }, [selectedName]);
 
     return (
         <div className="h-screen flex flex-col overflow-hidden relative bg-transparent">
@@ -34,7 +47,7 @@ const AsmaulHusna: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </header>
 
             <main className="flex-1 overflow-hidden flex flex-col px-4 z-10">
-                <div className="flex-1 overflow-y-auto hide-scrollbar pt-6 pb-48">
+                <div className="flex-1 overflow-y-auto hide-scrollbar pt-0 pb-48">
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-w-5xl mx-auto">
                         {asmaulHusna.map((item) => (
                             <motion.button

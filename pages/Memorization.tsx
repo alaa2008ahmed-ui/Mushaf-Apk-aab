@@ -5,11 +5,13 @@ import ThemePageLock from '../components/ThemePageLock';
 import { quranData as quranJsonData } from '../utils/quranData';
 const quranData = { data: quranJsonData };
 import { SURAH_NAMES_AR, MEMORIZATION_READERS } from '../components/QuranReader/constants';
+import { registerBackInterceptor } from '../hooks/useBackButton';
 import BottomBar from '../components/BottomBar';
 import TutorialOverlay, { TutorialStep } from '../components/Tutorial/TutorialOverlay';
 import { QuranDownloadModal } from '../components/QuranReader/DownloadModals';
+import ReciterSelectModal from '../components/QuranReader/ReciterSelectModal';
 import Toast from '../components/QuranReader/Toast';
-import { memorizationService, MemorizedRange } from '../src/services/memorizationService';
+import { memorizationService, MemorizedRange } from '../services/memorizationService';
 import './QuranReader.css';
 
 interface MemorizationProps {
@@ -21,8 +23,9 @@ const Memorization: React.FC<MemorizationProps> = ({ onBack, onNavigate }) => {
     const { theme, themeKey } = useTheme();
     const isDefaultTheme = themeKey === 'default';
     const isBlackAndWhite = themeKey === 'deep_black';
-    const primaryColor = isBlackAndWhite ? '#FFFFFF' : theme.palette[0];
-    const btnTextColor = isBlackAndWhite ? '#000000' : '#FFFFFF';
+    const isBlackTheme = theme.bgColor === '#000000';
+    const primaryColor = theme.accent || (isBlackTheme ? '#FFFFFF' : (isBlackAndWhite ? '#FFFFFF' : theme.palette[0]));
+    const btnTextColor = theme.btnText || (isBlackTheme ? '#000000' : (isBlackAndWhite ? '#000000' : '#FFFFFF'));
     
     const [selectedReader, setSelectedReader] = useState(MEMORIZATION_READERS[1].id); // Default to Abdul Basit
     
@@ -116,6 +119,32 @@ const Memorization: React.FC<MemorizationProps> = ({ onBack, onNavigate }) => {
         };
         localStorage.setItem('memorization_settings_v1', JSON.stringify(settings));
     }, [selectedReader, fromSurah, fromAyah, toSurah, toAyah, rangeRepeat, ayahRepeat, linkedRepeat, pauseLength, testAfterSession]);
+
+    // Auto-scroll to selected items when pickers are opened
+    useEffect(() => {
+        if (!activePicker || activePicker === 'reader') return;
+
+        const timer = setTimeout(() => {
+            let elementId = '';
+            if (activePicker === 'fromSurah') {
+                elementId = `surah-btn-${fromSurah}`;
+            } else if (activePicker === 'toSurah') {
+                elementId = `surah-btn-${toSurah}`;
+            } else if (activePicker === 'fromAyah') {
+                elementId = `ayah-btn-${fromAyah}`;
+            } else if (activePicker === 'toAyah') {
+                elementId = `ayah-btn-${toAyah}`;
+            }
+
+            if (elementId) {
+                const el = document.getElementById(elementId);
+                if (el) {
+                    el.scrollIntoView({ block: 'center', behavior: 'auto' });
+                }
+            }
+        }, 50);
+        return () => clearTimeout(timer);
+    }, [activePicker, selectedReader, fromSurah, toSurah, fromAyah, toAyah]);
 
     const handleStart = () => {
         const session = localStorage.getItem('memorization_session_v1');
@@ -256,6 +285,19 @@ const Memorization: React.FC<MemorizationProps> = ({ onBack, onNavigate }) => {
         else onBack();
     };
 
+    useEffect(() => {
+        const interceptor = () => {
+            if (showHelpModal) { setShowHelpModal(false); return true; }
+            if (showExplanationModal) { setShowExplanationModal(false); return true; }
+            if (showResumePrompt) { setShowResumePrompt(false); return true; }
+            if (activePicker) { setActivePicker(null); return true; }
+            if (showDownloadModal) { setShowDownloadModal(false); return true; }
+            return false;
+        };
+        const unregister = registerBackInterceptor(interceptor);
+        return unregister;
+    }, [showHelpModal, showExplanationModal, showResumePrompt, activePicker, showDownloadModal]);
+
     return (
         <div className="h-screen flex flex-col bg-transparent" style={{ fontFamily: theme.font, color: 'var(--text-color)' }}>
             <div className="relative z-10 flex flex-col h-full">
@@ -279,8 +321,8 @@ const Memorization: React.FC<MemorizationProps> = ({ onBack, onNavigate }) => {
                             onClick={() => setActiveTab('setup')}
                             className={`flex-1 py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${activeTab === 'setup' ? 'shadow-md' : 'opacity-60'}`}
                             style={{ 
-                                backgroundColor: activeTab === 'setup' ? (isDefaultTheme ? '#000000' : primaryColor) : (isDefaultTheme ? '#FFFFFF' : 'transparent'),
-                                color: activeTab === 'setup' ? (isDefaultTheme ? '#FFFFFF' : btnTextColor) : (isDefaultTheme ? '#000000' : 'var(--text-color)')
+                                backgroundColor: activeTab === 'setup' ? primaryColor : 'transparent',
+                                color: activeTab === 'setup' ? btnTextColor : 'var(--text-color)'
                             }}
                         >
                             <BookOpen size={16} />
@@ -290,8 +332,8 @@ const Memorization: React.FC<MemorizationProps> = ({ onBack, onNavigate }) => {
                             onClick={() => setActiveTab('review')}
                             className={`flex-1 py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${activeTab === 'review' ? 'shadow-md' : 'opacity-60'}`}
                             style={{ 
-                                backgroundColor: activeTab === 'review' ? (isDefaultTheme ? '#000000' : primaryColor) : (isDefaultTheme ? '#FFFFFF' : 'transparent'),
-                                color: activeTab === 'review' ? (isDefaultTheme ? '#FFFFFF' : btnTextColor) : (isDefaultTheme ? '#000000' : 'var(--text-color)')
+                                backgroundColor: activeTab === 'review' ? primaryColor : 'transparent',
+                                color: activeTab === 'review' ? btnTextColor : 'var(--text-color)'
                             }}
                         >
                             <Calendar size={16} />
@@ -420,7 +462,8 @@ const Memorization: React.FC<MemorizationProps> = ({ onBack, onNavigate }) => {
                                 <label className="relative inline-flex items-center cursor-pointer scale-90">
                                     <input type="checkbox" className="sr-only peer" checked={linkedRepeat} onChange={(e) => { setLinkedRepeat(e.target.checked); setSavedSession(null); }} />
                                     <div 
-                                        className={`w-8 h-4.5 rounded-full peer peer-focus:outline-none transition-colors after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:after:-translate-x-3.5 peer-checked:after:border-white ${linkedRepeat ? 'bg-emerald-500' : 'bg-gray-400'}`}
+                                        className={`w-8 h-4.5 rounded-full peer peer-focus:outline-none transition-colors after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:after:-translate-x-3.5 peer-checked:after:border-white ${linkedRepeat ? (isBlackTheme ? 'bg-white' : (theme.accent ? 'opacity-100' : 'bg-emerald-500')) : 'bg-gray-400'}`}
+                                        style={linkedRepeat && !isBlackTheme ? { backgroundColor: primaryColor } : {}}
                                     ></div>
                                 </label>
                             </div>
@@ -448,7 +491,8 @@ const Memorization: React.FC<MemorizationProps> = ({ onBack, onNavigate }) => {
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" className="sr-only peer" checked={testAfterSession} onChange={(e) => { setTestAfterSession(e.target.checked); setSavedSession(null); }} />
                             <div 
-                                className={`w-9 h-5 rounded-full peer peer-focus:outline-none transition-colors after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:-translate-x-full peer-checked:after:border-white ${testAfterSession ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                                className={`w-9 h-5 rounded-full peer peer-focus:outline-none transition-colors after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:-translate-x-full peer-checked:after:border-white ${testAfterSession ? (isBlackTheme ? 'bg-white' : (theme.accent ? 'opacity-100' : 'bg-emerald-500')) : 'bg-gray-300'}`}
+                                style={testAfterSession && !isBlackTheme ? { backgroundColor: primaryColor } : {}}
                             ></div>
                         </label>
                     </div>
@@ -459,13 +503,13 @@ const Memorization: React.FC<MemorizationProps> = ({ onBack, onNavigate }) => {
                             <button 
                                 id="btn-start-memorization"
                                 onClick={handleStart}
-                                className={`w-full py-4 rounded-2xl font-bold text-lg shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3 ${isDefaultTheme ? 'border' : 'border-b-4 ring-4'}`}
+                                className={`w-full py-4 rounded-2xl font-bold text-lg shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3 border-b-4 ring-4`}
                                 style={{
-                                    backgroundColor: isDefaultTheme ? '#FFFFFF' : primaryColor,
-                                    borderColor: isDefaultTheme ? '#e5e7eb' : (isBlackAndWhite ? '#E5E5E5' : theme.palette[1] || primaryColor),
-                                    color: isDefaultTheme ? '#000000' : btnTextColor,
-                                    boxShadow: isDefaultTheme ? '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' : `0 10px 30px -5px ${primaryColor}80`,
-                                    '--tw-ring-color': isDefaultTheme ? 'transparent' : `${primaryColor}33`
+                                    backgroundColor: primaryColor,
+                                    borderColor: (isBlackAndWhite ? '#E5E5E5' : theme.palette[1] || primaryColor),
+                                    color: btnTextColor,
+                                    boxShadow: `0 10px 30px -5px ${primaryColor}80`,
+                                    '--tw-ring-color': `${primaryColor}33`
                                 } as React.CSSProperties}
                             >
                                 <Play size={20} fill="currentColor" />
@@ -483,8 +527,8 @@ const Memorization: React.FC<MemorizationProps> = ({ onBack, onNavigate }) => {
                                 }}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                                        <Download size={18} className="text-emerald-500" />
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isBlackTheme ? 'bg-white' : 'bg-emerald-500/10'}`}>
+                                        <Download size={18} className={isBlackTheme ? 'text-black' : 'text-emerald-500'} />
                                     </div>
                                     <span className="font-bold text-sm">تحميل القراء</span>
                                 </div>
@@ -664,28 +708,41 @@ const Memorization: React.FC<MemorizationProps> = ({ onBack, onNavigate }) => {
                 </div>
             )}
 
+            {/* Reader Picker using ReciterSelectModal */}
+            {activePicker === 'reader' && (
+                <div style={{
+                    '--qr-bg': theme.bgColor || '#0D1B2A',
+                    '--qr-text': theme.textColor,
+                    '--qr-card-bg': isBlackTheme ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.5)',
+                    '--qr-card-text': theme.textColor,
+                    '--qr-card-border': isBlackTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)',
+                    '--qr-accent': isDefaultTheme ? '#000000' : (theme.palette[1] || theme.palette[0]),
+                    '--qr-accent-text': '#ffffff',
+                    '--qr-modal-bg': theme.bgColor || '#0D1B2A',
+                    '--qr-modal-text': theme.textColor
+                } as React.CSSProperties}>
+                    <ReciterSelectModal
+                        onClose={() => setActivePicker(null)}
+                        currentReader={selectedReader}
+                        onSelect={(id) => { setSelectedReader(id); setSavedSession(null); setActivePicker(null); }}
+                        isLandscape={window.innerWidth > window.innerHeight}
+                        readersList={MEMORIZATION_READERS}
+                    />
+                </div>
+            )}
+
             {/* Custom Picker Modal */}
-            {activePicker && (
+            {activePicker && activePicker !== 'reader' && (
                 <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn" onClick={() => setActivePicker(null)}>
                     <div className="w-full max-w-[280px] rounded-[2rem] p-4 shadow-2xl animate-modal-enter flex flex-col max-h-[75vh]" onClick={e => e.stopPropagation()} style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-color)', borderWidth: '1px', borderStyle: 'solid', borderColor: 'var(--card-border)' }}>
                         <div className="flex-1 overflow-y-auto scrollbar-hide space-y-2 p-2" dir="rtl">
-                            {activePicker === 'reader' && MEMORIZATION_READERS.map(r => (
-                                <button
-                                    key={r.id}
-                                    onClick={() => { setSelectedReader(r.id); setSavedSession(null); setActivePicker(null); }}
-                                    className={`w-full p-2.5 rounded-xl text-right font-bold transition-all flex items-center justify-between ${selectedReader === r.id ? 'theme-accent-btn text-white' : 'hover:bg-black/5 opacity-70 hover:opacity-100'}`}
-                                >
-                                    <span>{r.name}</span>
-                                    {selectedReader === r.id && <i className="fa-solid fa-check"></i>}
-                                </button>
-                            ))}
-
                             {(activePicker === 'fromSurah' || activePicker === 'toSurah') && SURAH_NAMES_AR.map((name, i) => {
                                 const surahNum = i + 1;
                                 const current = activePicker === 'fromSurah' ? fromSurah : toSurah;
                                 return (
                                     <button
                                         key={i}
+                                        id={`surah-btn-${surahNum}`}
                                         onClick={() => {
                                             if (activePicker === 'fromSurah') {
                                                 setFromSurah(surahNum);
@@ -707,7 +764,6 @@ const Memorization: React.FC<MemorizationProps> = ({ onBack, onNavigate }) => {
                                             <span className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] opacity-40 border" style={{ borderColor: 'var(--card-border)' }}>{surahNum}</span>
                                             <span className="text-sm">سورة {name}</span>
                                         </div>
-                                        {current === surahNum && <i className="fa-solid fa-check"></i>}
                                     </button>
                                 );
                             })}
@@ -720,6 +776,7 @@ const Memorization: React.FC<MemorizationProps> = ({ onBack, onNavigate }) => {
                                         return (
                                             <button
                                                 key={i}
+                                                id={`ayah-btn-${ayahNum}`}
                                                 onClick={() => {
                                                     if (activePicker === 'fromAyah') setFromAyah(ayahNum);
                                                     else setToAyah(ayahNum);
@@ -749,10 +806,10 @@ const Memorization: React.FC<MemorizationProps> = ({ onBack, onNavigate }) => {
                                                     else if (activePicker === 'pause') setPauseLength(val);
                                                     setActivePicker(null);
                                                 }}
-                                                className={`py-4 flex items-center justify-center rounded-2xl border-2 font-bold transition-all active:scale-95 text-lg ${isSelected ? 'theme-accent-btn text-white border-transparent' : ''}`}
+                                                className={`py-4 flex items-center justify-center rounded-2xl border-2 font-bold transition-all active:scale-95 text-lg ${isSelected ? (isDefaultTheme ? 'bg-black text-white border-transparent' : 'theme-accent-btn text-white border-transparent') : ''}`}
                                                 style={{ 
                                                     borderColor: isSelected ? 'transparent' : 'var(--card-border)',
-                                                    backgroundColor: isSelected ? 'var(--btn-bg)' : 'transparent',
+                                                    backgroundColor: isSelected ? (isDefaultTheme ? '#000' : 'var(--btn-bg)') : 'transparent',
                                                     color: isSelected ? '#fff' : 'var(--text-color)',
                                                     boxShadow: isSelected ? `0 8px 20px rgba(0,0,0,0.15)` : 'none'
                                                 }}

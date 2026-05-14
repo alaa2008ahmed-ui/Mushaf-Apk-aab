@@ -30,9 +30,10 @@ function PrayerTimes({ onBack, onNavigate }) {
 
     const isDefaultTheme = themeKey === 'default';
     const isBlackAndWhite = themeKey === 'deep_black';
-    const primaryColor = isDefaultTheme ? '#000000' : (isBlackAndWhite ? '#FFFFFF' : theme.palette[0]);
-    const secondaryColor = isDefaultTheme ? '#000000' : (isBlackAndWhite ? '#FFFFFF' : theme.palette[1]);
-    const topBarTextColor = isDefaultTheme ? '#000000' : (theme.topBarText || (isBlackAndWhite ? '#FFFFFF' : theme.palette[0]));
+    const isBlackTheme = theme.bgColor === '#000000';
+    const primaryColor = isBlackTheme ? '#FFFFFF' : (isDefaultTheme ? '#000000' : (isBlackAndWhite ? '#FFFFFF' : theme.palette[0]));
+    const secondaryColor = isBlackTheme ? '#FFFFFF' : (isDefaultTheme ? '#000000' : (isBlackAndWhite ? '#FFFFFF' : theme.palette[1]));
+    const topBarTextColor = isBlackTheme ? '#FFFFFF' : (isDefaultTheme ? '#000000' : (theme.topBarText || (isBlackAndWhite ? '#FFFFFF' : theme.palette[0])));
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
@@ -51,7 +52,7 @@ function PrayerTimes({ onBack, onNavigate }) {
     const prayerTutorialSteps: TutorialStep[] = [
         {
             id: 'location-refresh',
-            title: 'تحديد الموقع الجغرافي بدقة',
+            title: 'تحديد الموقع الجغرافي',
             text: 'اضغط هنا لتحديث موقعك الحالي عبر الـ GPS. هذا يضمن لك الحصول على مواقيت صلاة دقيقة جداً متوافقة مع مكان تواجدك الفعلي، وهو أمر حيوي خاصة عند السفر أو التنقل بين المدن.',
             selector: '#location-refresh-btn',
             icon: <MapPin className="w-8 h-8 text-white" />
@@ -65,7 +66,7 @@ function PrayerTimes({ onBack, onNavigate }) {
         },
         {
             id: 'next-prayer',
-            title: 'عداد الصلاة القادمة',
+            title: 'عداد الصلاة',
             text: 'هذا القسم هو رفيقك لتنظيم وقتك؛ فهو يعرض اسم الصلاة القادمة مع عد تنازلي دقيق بالثواني.',
             selector: '#next-prayer-countdown-container',
             icon: <Clock className="w-8 h-8 text-white" />
@@ -79,7 +80,7 @@ function PrayerTimes({ onBack, onNavigate }) {
         },
         {
             id: 'prayer-settings',
-            title: 'التحكم في الأذان والتنبيهات',
+            title: 'التحكم في الأذان',
             text: 'لكل صلاة إعدادات مستقلة؛ يمكنك تفعيل الأذان الكامل، أو التنبيه فقط، أو كتم الصوت. كما يمكنك الضغط على "تخصيص" لاختيار صوت المؤذن المفضل لديك (مثل الحرم المكي أو المدني) وضبط دقائق التنبيه قبل الصلاة.',
             selector: '#prayer-actions-container',
             icon: <Bell className="w-8 h-8 text-white" />
@@ -240,10 +241,10 @@ function PrayerTimes({ onBack, onNavigate }) {
                 topBarTextColor={topBarTextColor}
             />
 
-            <main className="flex-1 overflow-y-auto hide-scrollbar p-4 pb-2">
-                <div className="max-w-md mx-auto">
-                    <div className={`themed-card ${isDefaultTheme ? 'bg-white border-gray-200' : 'bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5'} border rounded-[1.25rem] p-3 mb-3 shadow-sm`}>
-                        <div className="flex gap-2 mb-3">
+            <main className="flex-1 overflow-y-auto hide-scrollbar px-2 pb-1">
+                <div className="max-w-md mx-auto flex flex-col h-full">
+                    <div className={`themed-card ${isDefaultTheme ? 'bg-white border-gray-200' : 'bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5'} border rounded-xl p-2 mb-1.5 shadow-sm`}>
+                        <div className="flex gap-2 mb-1.5">
                             <button
                                 onClick={() => {
                                     const lat = config.location?.lat;
@@ -262,6 +263,7 @@ function PrayerTimes({ onBack, onNavigate }) {
                             </button>
                              <button
                                 onClick={() => onNavigate('monthly-prayer-times')}
+                                id="monthly-times-btn"
                                 className={`${isDefaultTheme ? 'bg-white' : 'themed-card'} flex-1 rounded-xl p-3 flex items-center justify-center gap-1.5 shadow-sm font-bold text-[13px] active:scale-95 transition-all hover:bg-black/5 dark:hover:bg-white/5`}
                                 style={{ color: secondaryColor, border: isDefaultTheme ? '1px solid #f3f4f6' : undefined }}
                             >
@@ -312,6 +314,7 @@ function PrayerTimes({ onBack, onNavigate }) {
                                 countdown={countdown}
                                 isBlackAndWhite={isBlackAndWhite}
                                 isDefaultTheme={isDefaultTheme}
+                                isBlackTheme={isBlackTheme}
                                 themePalette0={theme.palette[0]}
                                 themePalette1={theme.palette[1]}
                                 formatTime12={formatTime12}
@@ -353,6 +356,7 @@ function PrayerTimes({ onBack, onNavigate }) {
                                         secondaryColor={secondaryColor}
                                         isBlackAndWhite={isBlackAndWhite}
                                         isDefaultTheme={isDefaultTheme}
+                                        isBlackTheme={isBlackTheme}
                                         themePalette1={theme.palette[1]}
                                     togglePrayerSound={togglePrayerSound}
                                     openSettings={openSettings}
@@ -366,11 +370,11 @@ function PrayerTimes({ onBack, onNavigate }) {
                         })}
                     </div>
                     
-                    <p className="text-center text-sm mt-6 opacity-70" style={{ color: secondaryColor }}>
+                    <p className="text-center text-sm mt-3 opacity-70" style={{ color: secondaryColor }}>
                         (يجب تفعيل الموقع للهاتف لحساب الموقع بدقه)
                     </p>
                 </div>
-                <div className="w-full h-24 shrink-0"></div>
+                <div className="w-full h-12 shrink-0"></div>
             </main>
 
             <PrayerTimesSettingsModal 
@@ -411,7 +415,7 @@ function PrayerTimes({ onBack, onNavigate }) {
                     {toastMessage}
                 </div>
             )}
-            <BottomBar onHomeClick={onBack} onThemesClick={() => {}} showThemes={false} />
+            <BottomBar onHomeClick={() => onNavigate('home')} onThemesClick={() => {}} showThemes={false} />
             <TutorialOverlay tutorialId="prayer-times-tutorial" steps={prayerTutorialSteps} />
         </div>
     );

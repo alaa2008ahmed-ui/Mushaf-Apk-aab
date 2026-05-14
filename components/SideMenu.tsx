@@ -150,7 +150,8 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, onOpen
                                         onClick={() => {
                                             if (item.id === 'themes') onOpenThemes();
                                             else if (item.id === 'whatsapp') window.open('https://wa.me/201000000000', '_blank');
-                                            else if (item.id === 'settings' || item.id === 'readers' || item.id === 'font-type' || item.id === 'notifications' || item.id === 'sajdah') onNavigate('settings');
+                                            else if (item.id === 'notifications') onNavigate('phone-notifications');
+                                            else if (item.id === 'settings' || item.id === 'readers' || item.id === 'font-type' || item.id === 'sajdah') onNavigate('settings');
                                             else if (item.id === 'home') onNavigate('home', { force: true });
                                             else onNavigate(item.id);
                                             onClose();

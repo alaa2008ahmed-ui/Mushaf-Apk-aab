@@ -31,9 +31,10 @@ interface MoreMenuPageProps {
     onNavigate: (pageId: string, params?: any) => void;
     onBack: () => void;
 }
+import ThemePageLock from '../components/ThemePageLock';
 
 const MoreMenuPage: React.FC<MoreMenuPageProps> = ({ onNavigate, onBack }) => {
-    const { theme, themeKey } = useTheme();
+    const { theme, themeKey, togglePageLock, isPageLocked } = useTheme();
     const [showNewBadges, setShowNewBadges] = useState(false);
     const [visibleItems, setVisibleItems] = useState<string[]>(() => {
         const savedVisible = localStorage.getItem('visibleMenuItems');
@@ -64,23 +65,32 @@ const MoreMenuPage: React.FC<MoreMenuPageProps> = ({ onNavigate, onBack }) => {
         <div id="more-menu-container">
             <InteractiveBackground />
             <div className="h-screen w-full flex flex-col overflow-hidden">
+                <header className="app-top-bar">
+                    <div className="app-top-bar__inner">
+                        <div className="relative flex items-center justify-center w-full">
+                            <div className="absolute left-0">
+                                <ThemePageLock />
+                            </div>
+                            <h1 className="app-top-bar__title text-2xl font-kufi">قائمة التطبيقات</h1>
+                        </div>
+                        <p className="app-top-bar__subtitle">تصفح جميع أقسام التطبيق</p>
+                    </div>
+                </header>
                 <div className="flex-1 overflow-y-auto pb-32 hide-scrollbar">
-                    <div className="main-layout px-4 flex flex-col pt-6" style={{ fontFamily: theme.font }}>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-5 w-full max-w-sm mx-auto">
+                    <div className="main-layout px-4 flex flex-col" style={{ fontFamily: theme.font }}>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-5 w-full max-w-sm mx-auto mt-6">
                             {ALL_MENU_ITEMS.map((item, idx) => {
                                 const isVisible = visibleItems.includes(item.id) || ['daily-wird', 'memorization', 'voice-control', 'habit-tracker', 'asmaul-husna'].includes(item.id);
                                 const isDefault = themeKey === 'default';
-                                const primaryColor = isDefault ? '#FFFFFF' : getPrimaryColor(item.id, item.colorIndex);
-                                const textColor = isDefault ? '#000000' : theme.btnText;
+                                const isBlackTheme = theme.bgColor === '#000000';
+                                const primaryColor = isBlackTheme ? '#000000' : (isDefault ? '#FFFFFF' : getPrimaryColor(item.id, item.colorIndex));
+                                const textColor = isBlackTheme ? '#FFFFFF' : (isDefault ? '#000000' : theme.btnText);
                                 const isNew = showNewBadges && ['daily-wird', 'memorization', 'voice-control', 'asmaul-husna', 'habit-tracker'].includes(item.id);
                                 
                                 return (
-                                    <motion.div
+                                    <div
                                         key={item.id}
-                                        initial={isVisible ? { opacity: 0, y: 20 } : false}
-                                        animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, scale: 0.95 }}
-                                        transition={{ duration: 0.4, delay: idx * 0.03 }}
-                                        className={item.className}
+                                        className={`${item.className} relative`}
                                         style={{ visibility: isVisible ? 'visible' : 'hidden' }}
                                     >
                                         <NavButton
@@ -90,11 +100,31 @@ const MoreMenuPage: React.FC<MoreMenuPageProps> = ({ onNavigate, onBack }) => {
                                             color={primaryColor}
                                             showNewBadge={isNew}
                                             badgeText="جديد"
-                                            isGlass={isDefault ? false : theme.isGlass}
+                                            isGlass={isBlackTheme ? false : (isDefault ? false : theme.isGlass)}
                                             btnText={textColor}
-                                            border={isDefault ? '2px solid #000000' : undefined}
+                                            border={isBlackTheme ? '1px solid #333333' : (isDefault ? '2px solid #000000' : undefined)}
                                         />
-                                    </motion.div>
+                                        {item.id === 'quran' && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onNavigate('quran-landscape');
+                                                }}
+                                                className="absolute top-1/2 left-2 -translate-y-1/2 rounded-full w-9 h-9 flex items-center justify-center z-[20] transition-all shadow-xl border"
+                                                style={{ 
+                                                    backgroundColor: isBlackTheme ? '#000000' : (themeKey === 'default' ? '#ffffff' : (theme.isGlass ? 'rgba(255, 255, 255, 0.2)' : (theme.palette[1] || '#8B5CF6'))),
+                                                    color: isBlackTheme ? '#ffffff' : (themeKey === 'default' ? '#000000' : '#ffffff'),
+                                                    borderColor: isBlackTheme ? '#333333' : (themeKey === 'default' ? '#000000' : (theme.isGlass ? 'rgba(255, 255, 255, 0.3)' : 'transparent')),
+                                                    backdropFilter: theme.isGlass ? 'blur(4px)' : 'none',
+                                                    WebkitBackdropFilter: theme.isGlass ? 'blur(4px)' : 'none',
+                                                    borderWidth: (isBlackTheme || themeKey === 'default') ? '2px' : '1px'
+                                                }}
+                                                title="وضع العرض"
+                                            >
+                                                <i className="fa-solid fa-arrows-rotate text-lg"></i>
+                                            </button>
+                                        )}
+                                    </div>
                                 );
                             })}
                         </div>

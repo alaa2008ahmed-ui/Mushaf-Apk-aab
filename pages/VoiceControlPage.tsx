@@ -28,7 +28,7 @@ const AVAILABLE_ACTIONS = [
     { id: 'open_asmaul_husna', name: 'أسماء الله الحسنى' },
     { id: 'open_daily_wird', name: 'الورد اليومي' },
     { id: 'open_memorization', name: 'التحفيظ' },
-    { id: 'open_more', name: 'المزيد / المزيد' },
+    { id: 'open_more', name: 'قائمة التطبيقات' },
     { id: 'open_nawawi', name: 'الاربعون النوويه / الاربعون النوويه' },
     { id: 'go_back', name: 'رجوع' },
     { id: 'exit_app', name: 'خروج' },
@@ -116,7 +116,7 @@ const VoiceControlPage: React.FC<{ onBack: () => void, onNavigate: (pageId: stri
     const voiceControlTutorialSteps: TutorialStep[] = [
         {
             id: 'voice-welcome',
-            title: 'التحكم الصوتي الذكي (باللغة العربية)',
+            title: 'التحكم الصوتي الذكي',
             text: 'مرحباً بك في عالم التحكم الصوتي. هذه الميزة تتيح لك التحدث مع التطبيق كما تتحدث مع صديقك. يمكنك طلب أي شيء من التطبيق باللغة العربية الفصحى أو العامية المصرية، وسيفهمك المساعد الذكي وينفذ طلبك فوراً.',
             position: { top: '60%' },
             icon: <Mic className="w-8 h-8 text-white" />
@@ -135,12 +135,6 @@ const VoiceControlPage: React.FC<{ onBack: () => void, onNavigate: (pageId: stri
             selector: '#commands-list-container',
             position: { top: '65%' },
             icon: <ChevronRight className="w-8 h-8 text-white" />
-        },
-        {
-            id: 'voice-feedback',
-            title: 'التفاعل البصري والصوتي',
-            text: 'عندما تتحدث، ستظهر لك موجات صوتية ونصوص توضح ما فهمه التطبيق. إذا لم يفهم المساعد أمرك، سيطلب منك الإعادة بلطف. تأكد من وجودك في مكان هادئ للحصول على أفضل النتائج.',
-            icon: <Mic className="w-8 h-8 text-white" />
         }
     ];
 
@@ -158,7 +152,7 @@ const VoiceControlPage: React.FC<{ onBack: () => void, onNavigate: (pageId: stri
                 </div>
             </header>
 
-            <main className="w-full flex-1 flex flex-col items-center overflow-hidden p-4 pb-4">
+            <main className="w-full flex-1 flex flex-col items-center overflow-hidden px-4 pb-4">
                 <div className="w-full max-w-lg flex-1 overflow-y-auto hide-scrollbar pb-6 space-y-6">
                     {/* Merged Status & Settings Section */}
                     <div className="themed-card p-4 space-y-4 relative">
@@ -255,7 +249,7 @@ const VoiceControlPage: React.FC<{ onBack: () => void, onNavigate: (pageId: stri
                                     <li>"فتح التحكم الصوتي" / "التحكم الصوتى": للانتقال لإعدادات التحكم الصوتي.</li>
                                     <li>"فتح الادعيه" / "الادعيه": لفتح صفحة الادعيه.</li>
                                     <li>"فتح الحج والعمرة" / "الحج والعمرة": لفتح صفحه الحج والعمرة.</li>
-                                    <li>"فتح المزيد" / "المزيد": لفتح صفحة المزيد (من الصفحة الرئيسية).</li>
+                                    <li>"فتح قائمة التطبيقات" / "قائمة التطبيقات": لفتح صفحة قائمة التطبيقات (من الصفحة الرئيسية).</li>
                                     <li>"فتح الاربعون النوويه" / "الاربعون النوويه": لفتح صفحة الاربعون النوويه.</li>
                                     <li>"رجوع": للعودة الى الصفحه السابقة.</li>
                                     <li>"خروج": لإغلاق التطبيق.</li>

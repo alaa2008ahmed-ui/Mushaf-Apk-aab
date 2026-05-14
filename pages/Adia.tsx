@@ -8,8 +8,9 @@ import { registerBackInterceptor } from '../hooks/useBackButton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { shareAsImage } from '../utils/shareAsImage';
 
-function Adia({ onBack }) {
+function Adia({ onBack, onNavigate }) {
     const { theme, themeKey } = useTheme();
+    const isBlackTheme = theme.bgColor === '#000000';
     const [zoomedDuaa, setZoomedDuaa] = useState(null);
     const [activeCategory, setActiveCategory] = useState('all');
     const [favorites, setFavorites] = useState<string[]>([]);
@@ -143,7 +144,7 @@ function Adia({ onBack }) {
                 </div>
             </header>
 
-            <main ref={mainRef} className="w-full flex-1 overflow-y-auto px-4 pt-4 pb-4">
+            <main ref={mainRef} className="w-full flex-1 overflow-y-auto px-4 pt-0 pb-4">
                 <div className="mb-6">
                     <div className="relative max-w-2xl mx-auto border-2 rounded-2xl overflow-hidden focus-within:ring-2 transition-all shadow-sm" style={{ borderColor: 'var(--card-border)', ...themeKey === 'default' ? { focusRingColor: '#000'} : { focusRingColor: theme.palette[0]} }}>
                         <input 
@@ -245,14 +246,14 @@ function Adia({ onBack }) {
                             <button 
                                 onClick={() => { setActiveCategory('all'); setIsMenuOpen(false); }}
                                 className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-bold transition-colors ${activeCategory === 'all' ? 'bg-black/5 dark:bg-white/10' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
-                                style={activeCategory === 'all' ? { color: theme.palette[0] } : {}}
+                                style={activeCategory === 'all' ? { color: isBlackTheme ? '#FFFFFF' : theme.palette[0] } : {}}
                             >
                                 الكل
                             </button>
                             <button 
                                 onClick={() => { setActiveCategory('favorites'); setIsMenuOpen(false); }}
                                 className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-between ${activeCategory === 'favorites' ? 'bg-black/5 dark:bg-white/10' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
-                                style={activeCategory === 'favorites' ? { color: theme.palette[0] } : {}}
+                                style={activeCategory === 'favorites' ? { color: isBlackTheme ? '#FFFFFF' : theme.palette[0] } : {}}
                             >
                                 المفضلة
                                 <i className="fa-solid fa-heart text-xs opacity-70"></i>
@@ -263,7 +264,7 @@ function Adia({ onBack }) {
                                     key={category.id}
                                     onClick={() => { setActiveCategory(category.id); setIsMenuOpen(false); }}
                                     className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-between ${activeCategory === category.id ? 'bg-black/5 dark:bg-white/10' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
-                                    style={activeCategory === category.id ? { color: theme.palette[0] } : {}}
+                                    style={activeCategory === category.id ? { color: isBlackTheme ? '#FFFFFF' : theme.palette[0] } : {}}
                                 >
                                     {category.title}
                                     <i className={`fa-solid ${category.icon} text-xs opacity-70`}></i>
@@ -276,11 +277,11 @@ function Adia({ onBack }) {
                 <button 
                     ref={fabRef}
                     onClick={handleFabClick}
-                    className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95 cursor-pointer relative z-10 ${themeKey === 'default' ? 'text-black' : 'text-white'}`}
+                    className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95 cursor-pointer relative z-10 ${themeKey === 'default' ? 'text-black' : (isBlackTheme ? 'text-black' : 'text-white')}`}
                     style={
                         themeKey === 'default'
                         ? { backgroundColor: '#ffffff', border: '1px solid #000000' }
-                        : { backgroundColor: theme.palette[0] }
+                        : { backgroundColor: isBlackTheme ? '#FFFFFF' : theme.palette[0] }
                     }
                 >
                     <i className={`fa-solid ${isMenuOpen ? 'fa-times' : 'fa-list-ul'} text-xl`}></i>

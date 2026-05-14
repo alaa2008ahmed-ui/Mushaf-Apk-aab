@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 @plugin "@tailwindcss/typography";
 
 @import "@fortawesome/fontawesome-free/css/all.min.css";
@@ -102,10 +103,10 @@
   --animate-spin-slow: spin-slow 3s linear infinite;
 
   @keyframes fadeIn {
-    from { opacity: 0; }
+    from { opacity: 1; }
     to { opacity: 1; }
   }
-  --animate-fadeIn: fadeIn 0.15s ease-out;
+  --animate-fadeIn: fadeIn 0s ease-out;
 
   @keyframes modal-enter {
     from { opacity: 0; transform: scale(0.9) translateY(20px); }

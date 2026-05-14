@@ -6,6 +6,8 @@ import { useHabitTracker, DailyRecord, HabitCategory, defaultRecord } from '../h
 import { useTheme } from '../context/ThemeContext';
 import ThemePageLock from '../components/ThemePageLock';
 import BottomBar from '../components/BottomBar';
+import { registerBackInterceptor } from '../hooks/useBackButton';
+import TutorialOverlay, { TutorialStep } from '../components/Tutorial/TutorialOverlay';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 import Confetti from 'react-dom-confetti';
@@ -25,7 +27,7 @@ const CONFETTI_CONFIG = {
 };
 
 interface HabitTrackerProps {
-  onBack: () => void;
+  onBack: () => void; onNavigate: (id: string, params?: any) => void; 
 }
 
 const ProgressRing = ({ progress, size = 100, strokeWidth = 8, color }: { progress: number, size?: number, strokeWidth?: number, color: string }) => {
@@ -51,9 +53,10 @@ const ProgressRing = ({ progress, size = 100, strokeWidth = 8, color }: { progre
   );
 };
 
-const HabitTracker: React.FC<HabitTrackerProps> = ({ onBack }) => {
+const HabitTracker: React.FC<HabitTrackerProps> = ({ onBack , onNavigate }) => {
   const { theme } = useTheme();
-  const hexColor = theme.palette && theme.palette.length > 0 ? theme.palette[0] : '#059669';
+  const isBlackTheme = theme.bgColor === '#000000';
+  const hexColor = isBlackTheme ? '#FFFFFF' : (theme.palette && theme.palette.length > 0 ? theme.palette[0] : '#059669');
   const todayStr = moment().format('YYYY-MM-DD');
 
   const records = useHabitTracker((state) => state.records);
@@ -79,7 +82,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ onBack }) => {
 
   if (diff > 0) {
     comparisonMsg = `أعلى من الأمس بـ ${diff}% 📈`;
-    comparisonClass = 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300';
+    comparisonClass = isBlackTheme ? 'bg-white/10 text-white border border-white/20' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300';
   } else if (diff < 0) {
     comparisonMsg = `أقل من الأمس بـ ${Math.abs(diff)}% 📉`;
     comparisonClass = 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300';
@@ -87,6 +90,26 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ onBack }) => {
     comparisonMsg = `نفس إنجاز الأمس ➖`;
     comparisonClass = 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
   }
+
+  const handleHomeClick = () => {
+    if (viewMode === 'archive') {
+      setViewMode('tracker');
+    } else {
+      onBack();
+    }
+  };
+
+  useEffect(() => {
+    const interceptor = () => {
+      if (viewMode === 'archive') {
+        setViewMode('tracker');
+        return true;
+      }
+      return false;
+    };
+    const unregister = registerBackInterceptor(interceptor);
+    return unregister;
+  }, [viewMode]);
 
   const heatmapData = useMemo(() => getHeatmapData(), [records, todayStr]);
 
@@ -187,29 +210,29 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ onBack }) => {
     const isSunnahCompleted = (todayRecord.prayers as any)[sunnahId];
     
     return (
-      <div key={id} className="bg-white/80 dark:bg-gray-800/80 rounded-2xl p-3 shadow-sm border border-black/5 dark:border-white/5 mb-0">
+      <div key={id} id={`prayer-card-${id}`} className="bg-white/80 dark:bg-gray-800/80 rounded-2xl p-3 shadow-sm border border-black/5 dark:border-white/5 mb-0">
          <span className="font-bold text-sm block mb-2 px-1 text-gray-800 dark:text-gray-200">{label}</span>
          <div className="flex gap-2">
             <motion.button 
                whileTap={{ scale: 0.95 }}
                onClick={() => handleToggle('prayers', fardId)}
-               className={`flex-1 flex items-center justify-between py-1.5 px-2 rounded-xl text-xs font-semibold transition-colors border ${isFardCompleted ? 'text-white' : 'text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700'}`}
+               className={`flex-1 flex items-center justify-between py-1.5 px-2 rounded-xl text-xs font-semibold transition-colors border ${isFardCompleted ? (isBlackTheme ? 'text-black' : 'text-white') : 'text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700'}`}
                style={isFardCompleted ? { backgroundColor: hexColor, borderColor: hexColor } : {}}
             >
                <span>الفريضة</span>
-               <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${isFardCompleted ? 'border-transparent' : 'border-gray-300 dark:border-gray-600'}`} style={isFardCompleted ? { backgroundColor: 'rgba(255,255,255,0.3)' } : {}}>
-                  {isFardCompleted && <CheckCircle className="w-2.5 h-2.5 text-white" />}
+               <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${isFardCompleted ? 'border-transparent' : 'border-gray-300 dark:border-gray-600'}`} style={isFardCompleted ? { backgroundColor: isBlackTheme ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.3)' } : {}}>
+                  {isFardCompleted && <CheckCircle className={`w-2.5 h-2.5 ${isBlackTheme ? 'text-black' : 'text-white'}`} />}
                </div>
             </motion.button>
             <motion.button 
                whileTap={{ scale: 0.95 }}
                onClick={() => handleToggle('prayers', sunnahId)}
-               className={`flex-1 flex items-center justify-between py-1.5 px-2 rounded-xl text-xs font-semibold transition-colors border ${isSunnahCompleted ? 'text-white' : 'text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700'}`}
+               className={`flex-1 flex items-center justify-between py-1.5 px-2 rounded-xl text-xs font-semibold transition-colors border ${isSunnahCompleted ? (isBlackTheme ? 'text-black' : 'text-white') : 'text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700'}`}
                style={isSunnahCompleted ? { backgroundColor: hexColor, borderColor: hexColor } : {}}
             >
                <span>السنة</span>
-               <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${isSunnahCompleted ? 'border-transparent' : 'border-gray-300 dark:border-gray-600'}`} style={isSunnahCompleted ? { backgroundColor: 'rgba(255,255,255,0.3)' } : {}}>
-                  {isSunnahCompleted && <CheckCircle className="w-2.5 h-2.5 text-white" />}
+               <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${isSunnahCompleted ? 'border-transparent' : 'border-gray-300 dark:border-gray-600'}`} style={isSunnahCompleted ? { backgroundColor: isBlackTheme ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.3)' } : {}}>
+                  {isSunnahCompleted && <CheckCircle className={`w-2.5 h-2.5 ${isBlackTheme ? 'text-black' : 'text-white'}`} />}
                </div>
             </motion.button>
          </div>
@@ -247,7 +270,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ onBack }) => {
             }`}
             style={isCompleted ? { backgroundColor: hexColor } : {}}
           >
-            {isCompleted && <CheckCircle className="w-3 h-3 text-white" />}
+            {isCompleted && <CheckCircle className={`w-3 h-3 ${isBlackTheme ? 'text-black' : 'text-white'}`} />}
           </div>
         </div>
       </motion.button>
@@ -257,6 +280,44 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ onBack }) => {
   if (viewMode === 'archive') {
     return <HabitArchive onBack={() => setViewMode('tracker')} />;
   }
+
+  const habitTrackerTutorialSteps: TutorialStep[] = [
+    {
+        id: 'habit-welcome',
+        title: 'مرحباً بك في مربّي العبادات',
+        text: 'هذا القسم مصمم خصيصاً ليساعدك على بناء عادات إيمانية قوية والمحافظة على طاعاتك اليومية بكل سهولة ويسر.',
+        position: { top: '60%' },
+        icon: <Heart className="w-8 h-8 text-white" />
+    },
+    {
+        id: 'habit-progress',
+        title: 'إنجازك اليومي والسنوي',
+        text: 'هنا ترى ملخص إنجازك اليومي، ومخطط الحرارة الذي يوضح استمراريتك طوال الشهر. كل مربع ملون يمثل يوماً مليئاً بالطاعات.',
+        selector: '#daily-achievement-card',
+        icon: <CheckCircle className="w-8 h-8 text-white" />
+    },
+    {
+        id: 'habit-fajr',
+        title: 'الفرائض والسنن',
+        text: 'يمكنك هنا تسجيل صلواتك الخمس، مع إمكانية متابعة السنن الرواتب لكل صلاة بشكل منفصل لزيادة الأجر.',
+        selector: '#prayer-card-fajr',
+        icon: <Clock className="w-8 h-8 text-white" />
+    },
+    {
+        id: 'habit-quran',
+        title: 'الورد القرآني',
+        text: 'لا تنسَ نصيبك من كتاب الله؛ سجل عدد الصفحات التي قرأتها اليوم وتابع تقدمك في الورد اليومي.',
+        selector: '#quran-habit-section',
+        icon: <BookOpen className="w-8 h-8 text-white" />
+    },
+    {
+        id: 'habit-streaks',
+        title: 'أوسمة الاستمرارية',
+        text: 'عندما تحافظ على عبادة معينة لـ 7 أيام متتالية، ستحصل على وسام تقديري تشجيعاً لك على المداومة. "أحب الأعمال إلى الله أدومها وإن قل".',
+        position: { top: '70%' },
+        icon: <Medal className="w-8 h-8 text-white" />
+    }
+  ];
 
   return (
     <div className={`h-screen flex flex-col bg-transparent relative`}>
@@ -277,9 +338,9 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ onBack }) => {
       </header>
 
       {/* Content */}
-      <main className="w-full flex-1 overflow-y-auto px-4 pt-4 pb-24">
+      <main className="w-full flex-1 overflow-y-auto px-4 pt-0 pb-24">
         
-        <div className="bg-white/80 dark:bg-gray-800/80 rounded-2xl p-4 shadow-sm border border-black/5 dark:border-white/5 mb-6 mt-2">
+        <div id="daily-achievement-card" className="bg-white/80 dark:bg-gray-800/80 rounded-2xl p-4 shadow-sm border border-black/5 dark:border-white/5 mb-6 mt-2">
             <div className="flex items-center justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
@@ -411,7 +472,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ onBack }) => {
         </section>
 
         {/* Quran */}
-        <section className="mb-6">
+        <section id="quran-habit-section" className="mb-6">
           <h3 className="text-sm font-bold mb-3 flex items-center gap-2 dark:text-white">
             <BookOpen className="w-4 h-4 opacity-70" style={{ color: hexColor }} />
             الورد القرآني
@@ -441,7 +502,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ onBack }) => {
               onClick={() => handleToggle('quran', 'completed', () => todayRecord.quran?.completed)}
               className={`w-full py-2.5 rounded-xl font-bold text-sm transition-colors ${
                   todayRecord.quran?.completed
-                    ? 'text-white'
+                    ? (isBlackTheme ? 'text-black' : 'text-white')
                     : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
               }`}
               style={todayRecord.quran?.completed ? { backgroundColor: hexColor } : {}}
@@ -483,7 +544,9 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ onBack }) => {
 
       </main>
 
-      <BottomBar onHomeClick={onBack} onThemesClick={() => {}} showThemes={false} />
+      <BottomBar onHomeClick={handleHomeClick} onThemesClick={() => {}} showThemes={false} />
+
+      <TutorialOverlay tutorialId="habit-tracker-tutorial" steps={habitTrackerTutorialSteps} />
 
       {/* Streak Achievement Modal */}
       <AnimatePresence>
@@ -500,7 +563,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ onBack }) => {
             </div>
             <div className="relative z-10 flex flex-col items-center">
               <div 
-                className="w-16 h-16 flex items-center justify-center rounded-full mb-4 text-white shadow-lg"
+                className={`w-16 h-16 flex items-center justify-center rounded-full mb-4 shadow-lg ${isBlackTheme ? 'text-black' : 'text-white'}`}
                 style={{ backgroundColor: hexColor }}
               >
                 <Medal className="w-8 h-8" />

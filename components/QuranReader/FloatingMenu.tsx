@@ -43,7 +43,6 @@ import {
   DEFAULT_SETTINGS,
   READERS,
   MEMORIZATION_READERS,
-  RECITERS,
   FONTS,
   TAFSEERS,
   JUZ_MAP,
@@ -54,6 +53,7 @@ import {
 import { quranData } from "../../utils/quranData";
 import { usePrayerTimes } from "../../context/PrayerTimesContext";
 import { useTheme } from "../../context/ThemeContext";
+import { RECITERS as LISTEN_RECITERS } from "../../data/listenQuranData";
 import { setupNotifications } from "../../utils/notifications";
 import TutorialOverlay, { TutorialStep } from "../Tutorial/TutorialOverlay";
 
@@ -94,6 +94,11 @@ interface FloatingMenuProps {
 
 const ALL_SHORTCUTS = [
   {
+    id: "more-menu",
+    label: "قائمة التطبيقات",
+    icon: <Grid size={18} />,
+  },
+  {
     id: "quran-download-parent",
     label: "تحميل القرآن",
     icon: <Download size={18} />,
@@ -115,6 +120,7 @@ const ALL_SHORTCUTS = [
 ];
 
 const DEFAULT_SHORTCUTS = [
+  "more-menu",
   "quran-download-parent",
   "tafseer-download",
   "interface-customization",
@@ -155,13 +161,16 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [tempShortcuts, setTempShortcuts] = useState<string[]>([]);
 
-  // Selection State for Downloads
+  //Selection State for Downloads
   const [selectedReader, setSelectedReader] = useState("");
   const [selectedTafsir, setSelectedTafsir] = useState(
     settings.tafseer || TAFSEERS[0].id,
   );
   const [selectedSurahs, setSelectedSurahs] = useState<string[]>([]);
   const [selectedJuzs, setSelectedJuzs] = useState<string[]>([]);
+  const [downloadedSurahs, setDownloadedSurahs] = useState<string[]>([]);
+  const [downloadedJuzs, setDownloadedJuzs] = useState<string[]>([]);
+  const [downloadedTafseers, setDownloadedTafseers] = useState<string[]>([]);
 
   // Download Status State
   const [isDownloading, setIsDownloading] = useState(false);
@@ -244,6 +253,13 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
       icon: <Bookmark className="w-8 h-8 text-white" />,
     },
     {
+      id: "floating-menu-more-menu",
+      title: "قائمة التطبيقات",
+      text: "يمكنك الانتقال مباشرة الى قائمة التطبيقات والاختيار منها",
+      selector: '[data-id="menu-item-more-menu"]',
+      icon: <Grid className="w-8 h-8 text-white" />,
+    },
+    {
       id: "floating-menu-quran-download",
       title: "تحميل القرآن",
       text: "تحميل صفحات المصحف والتلاوات للاستخدام بدون إنترنت.",
@@ -256,6 +272,13 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
       text: "تحميل كتب التفسير للقراءة في أي وقت بدون إنترنت.",
       selector: '[data-id="menu-item-tafseer-download"]',
       icon: <Download className="w-8 h-8 text-white" />,
+    },
+    {
+      id: "floating-menu-interface-customization",
+      title: "تخصيص الواجهة",
+      text: "تخصيص أزرار الاختصارات التي تظهر في القائمة الجانبية.",
+      selector: '[data-id="menu-item-interface-customization"]',
+      icon: <Palette className="w-8 h-8 text-white" />,
     },
     {
       id: "floating-menu-readers",
@@ -295,7 +318,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
       } else if (currentView === "download_memorization") {
         setSelectedReader(MEMORIZATION_READERS[0].id);
       } else if (currentView === "download_listening") {
-        setSelectedReader(RECITERS[0].id);
+        setSelectedReader(LISTEN_RECITERS[0].id);
       }
     }
   }, [currentView, selectedReader]);
@@ -314,11 +337,150 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
         setSelectedReader(MEMORIZATION_READERS[0].id);
       }
     } else if (currentView === "download_listening") {
-      if (selectedReader && !RECITERS.some((r) => r.id === selectedReader)) {
-        setSelectedReader(RECITERS[0].id);
+      if (selectedReader && !LISTEN_RECITERS.some((r) => r.id === selectedReader)) {
+        setSelectedReader(LISTEN_RECITERS[0].id);
       }
     }
   }, [currentView, selectedReader]);
+
+  // Check downloaded items for current selection
+  const checkDownloads = useCallback(() => {
+    if (currentView === "download_tafseer") {
+      if (!selectedTafsir) {
+        setDownloadedTafseers([]);
+        return;
+      }
+      try {
+        const downloadedFiles = JSON.parse(localStorage.getItem('downloaded_tafsir_files') || '[]');
+        const downloadedSet = new Set(downloadedFiles.map((f: any) => f.fileName));
+        const dSurahs: string[] = [];
+        for (let s = 1; s <= 114; s++) {
+          if (downloadedSet.has(`${selectedTafsir}_${s}_tafsir.json`)) {
+            dSurahs.push(s.toString());
+          }
+        }
+        setDownloadedTafseers(dSurahs);
+
+        const dJuzs: string[] = [];
+        for (let j = 1; j <= 30; j++) {
+          const ayahs = getAyahsForJuz(j);
+          const surahsInJuz = new Set(ayahs.map(a => a.surah));
+          let allSurahsDownloaded = true;
+          for (const s of surahsInJuz) {
+            if (!downloadedSet.has(`${selectedTafsir}_${s}_tafsir.json`)) {
+              allSurahsDownloaded = false;
+              break;
+            }
+          }
+          if (allSurahsDownloaded) dJuzs.push(j.toString());
+        }
+        setDownloadedJuzs(dJuzs);
+      } catch (e) {
+        console.error('Error checking tafsir downloads:', e);
+      }
+      return;
+    }
+
+    if (!selectedReader) {
+      setDownloadedSurahs([]);
+      setDownloadedJuzs([]);
+      return;
+    }
+
+    try {
+      const downloadedFiles = JSON.parse(localStorage.getItem('downloaded_audio_files') || '[]');
+      const downloadedSet = new Set(downloadedFiles.filter((f: any) => (f.size || 0) > 1000).map((f: any) => f.fileName));
+      const sanitizedId = getSanitizedReaderId(selectedReader);
+      const isSurahMode = currentView === "download_listening";
+
+      const dSurahs: string[] = [];
+      for (let s = 1; s <= 114; s++) {
+        let allItemsDownloaded = true;
+        if (isSurahMode) {
+          const fileName = `${sanitizedId}_${String(s).padStart(3, "0")}.mp3`;
+          if (!downloadedSet.has(fileName)) allItemsDownloaded = false;
+        } else {
+          const surahData = quranData.surahs.find((sd: any) => sd.number === s);
+          if (!surahData) {
+            allItemsDownloaded = false;
+          } else {
+            for (let i = 1; i <= surahData.ayahs.length; i++) {
+              if (!downloadedSet.has(`${sanitizedId}_${s}_${i}.mp3`)) {
+                allItemsDownloaded = false;
+                break;
+              }
+            }
+          }
+        }
+        if (allItemsDownloaded) dSurahs.push(s.toString());
+      }
+
+      const dJuzs: string[] = [];
+      for (let j = 1; j <= 30; j++) {
+        const ayahs = getAyahsForJuz(j);
+        let allItemsDownloaded = true;
+        if (isSurahMode) {
+          const surahsInJuz = Array.from(new Set(ayahs.map(a => a.surah)));
+          for (const sNum of surahsInJuz) {
+            const fileName = `${sanitizedId}_${String(sNum).padStart(3, "0")}.mp3`;
+            if (!downloadedSet.has(fileName)) {
+              allItemsDownloaded = false;
+              break;
+            }
+          }
+        } else {
+          for (const a of ayahs) {
+            if (!downloadedSet.has(`${sanitizedId}_${a.surah}_${a.ayah}.mp3`)) {
+              allItemsDownloaded = false;
+              break;
+            }
+          }
+        }
+        if (allItemsDownloaded) dJuzs.push(j.toString());
+      }
+      setDownloadedSurahs(dSurahs);
+      setDownloadedJuzs(dJuzs);
+    } catch (e) {
+      console.error('Error checking downloads:', e);
+    }
+  }, [selectedReader, selectedTafsir, currentView]);
+
+  useEffect(() => {
+    checkDownloads();
+    // Re-check on local storage changes (from other tabs)
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'downloaded_audio_files' || e.key === 'downloaded_tafsir_files') {
+        checkDownloads();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [checkDownloads]);
+
+  // Check if all selected items are already downloaded
+  const isAllSelectedDownloaded = () => {
+    if (selectedSurahs.length === 0 && selectedJuzs.length === 0) return false;
+    
+    if (currentView === "download_tafseer") {
+      if (selectedSurahs.includes("all")) return downloadedTafseers.length === 114;
+      for (const s of selectedSurahs) {
+        if (!downloadedTafseers.includes(s)) return false;
+      }
+      for (const j of selectedJuzs) {
+        if (!downloadedJuzs.includes(j)) return false;
+      }
+      return true;
+    } else {
+      if (selectedSurahs.includes("all")) return downloadedSurahs.length === 114;
+      for (const s of selectedSurahs) {
+        if (!downloadedSurahs.includes(s)) return false;
+      }
+      for (const j of selectedJuzs) {
+        if (!downloadedJuzs.includes(j)) return false;
+      }
+      return true;
+    }
+  };
 
   useEffect(() => {
     if (isFloatingMenuOpen) {
@@ -437,6 +599,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
         if (match) {
           const blob = await match.blob();
           storeAudioOffline(fileName, blob);
+          checkDownloads(); // Refresh status
           return;
         }
 
@@ -456,6 +619,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
           }),
         );
         storeAudioOffline(fileName, blob);
+        checkDownloads(); // Refresh status
       }
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
@@ -485,6 +649,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
         if (match) {
           const blob = await match.blob();
           storeAudioOffline(fileName, blob);
+          checkDownloads(); // Refresh status
           return;
         }
 
@@ -503,6 +668,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
           }),
         );
         storeAudioOffline(fileName, blob);
+        checkDownloads(); // Refresh status
       }
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
@@ -530,6 +696,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
         throw new Error(`فشل تحميل التفسير: ${response.status}`);
       const data = await response.json();
       storeTafsirOffline(fileName, data.data);
+      checkDownloads(); // Refresh status
     } catch (e) {
       if ((e as Error).name !== "AbortError") throw e;
     }
@@ -781,6 +948,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
   };
 
   const iconColor = currentTheme.accent || "#000000";
+  const sidebarIconColor = currentTheme.id === 'black' ? '#14b8a6' : iconColor;
 
   const applyTheme = (themeId: string) => {
     const theme = THEMES[themeId as keyof typeof THEMES];
@@ -889,7 +1057,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
       fontFamily: theme.font,
       ...(baseSettings.lockHighlightColor
         ? {}
-        : { highlightTextColor: theme.highlightText || theme.accent }),
+        : { highlightTextColor: theme.highlightText || theme.accent || (theme as any).palette?.[0] }),
       theme: themeId,
     };
     localStorage.setItem(
@@ -1126,11 +1294,14 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
                               className={`w-[20px] h-[20px] rounded-full border-2 transition-all flex items-center justify-center ${localStorage.getItem("current_theme_id" + (isMemorizationMode ? `_memorization_${isLandscape ? "h" : "v"}` : isWirdMode ? `_wird_${isLandscape ? "h" : "v"}` : readingMode === "mushaf" ? (isLandscape ? "_h" : "_v") : `_${readingMode}_${isLandscape ? "h" : "v"}`)) === id ? "scale-110 border-gray-400 shadow-md" : "border-transparent hover:scale-105"}`}
                               style={{
                                 backgroundColor:
-                                  id === "deep_black"
+                                  id === "black"
                                     ? "#000000"
-                                    : theme.accent ||
-                                      theme.barText ||
-                                      "#000000",
+                                    : id === "deep_black"
+                                      ? "#000000"
+                                      : theme.accent ||
+                                        theme.palette?.[0] ||
+                                        theme.barText ||
+                                        "#000000",
                               }}
                             >
                               {localStorage.getItem(
@@ -1546,32 +1717,35 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
                       >
                         الكل
                       </button>
-                      {SURAH_NAMES_AR.map((name, i) => (
-                        <button
-                          key={i}
-                          onClick={() =>
-                            toggleSelection((i + 1).toString(), "surah")
-                          }
-                          className={`p-2 text-[10px] font-bold rounded-lg border transition-all ${selectedSurahs.includes((i + 1).toString()) ? "border-emerald-500" : ""}`}
-                          style={{
-                            backgroundColor: selectedSurahs.includes(
-                              (i + 1).toString(),
-                            )
-                              ? `${currentTheme.accent}15`
-                              : `${currentTheme.text}05`,
-                            borderColor: selectedSurahs.includes(
-                              (i + 1).toString(),
-                            )
-                              ? currentTheme.accent
-                              : `${currentTheme.text}10`,
-                            color: selectedSurahs.includes((i + 1).toString())
-                              ? "text-emerald-500"
-                              : currentTheme.text,
-                          }}
-                        >
-                          {name}
-                        </button>
-                      ))}
+                      {SURAH_NAMES_AR.map((name, i) => {
+                        const isDownloaded = downloadedTafseers.includes((i + 1).toString());
+                        const isSelected = selectedSurahs.includes((i + 1).toString());
+                        return (
+                          <button
+                            key={i}
+                            onClick={() =>
+                              toggleSelection((i + 1).toString(), "surah")
+                            }
+                            className={`p-2 text-[10px] font-bold rounded-lg border transition-all ${isSelected ? "border-emerald-500" : isDownloaded ? "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-400 text-emerald-700 dark:text-emerald-400" : ""}`}
+                            style={{
+                              backgroundColor: isSelected
+                                ? `${currentTheme.accent}15`
+                                : isDownloaded ? undefined : `${currentTheme.text}05`,
+                              borderColor: isSelected
+                                ? currentTheme.accent
+                                : isDownloaded ? undefined : `${currentTheme.text}10`,
+                              color: isSelected
+                                ? "text-emerald-500"
+                                : isDownloaded ? undefined : currentTheme.text,
+                            }}
+                          >
+                            <div className="flex items-center justify-center gap-1">
+                              {isDownloaded && <Check size={10} />}
+                              <span>{name}</span>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -1584,26 +1758,33 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
                       اختر الأجزاء
                     </label>
                     <div className="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto p-1 custom-scrollbar">
-                      {Array.from({ length: 30 }, (_, i) => i + 1).map((j) => (
-                        <button
-                          key={j}
-                          onClick={() => toggleSelection(j.toString(), "juz")}
-                          className={`p-2 text-[10px] font-bold rounded-lg border transition-all ${selectedJuzs.includes(j.toString()) ? "border-emerald-500" : ""}`}
-                          style={{
-                            backgroundColor: selectedJuzs.includes(j.toString())
-                              ? `${currentTheme.accent}15`
-                              : `${currentTheme.text}05`,
-                            borderColor: selectedJuzs.includes(j.toString())
-                              ? currentTheme.accent
-                              : `${currentTheme.text}10`,
-                            color: selectedJuzs.includes(j.toString())
-                              ? "text-emerald-500"
-                              : currentTheme.text,
-                          }}
-                        >
-                          ج {j}
-                        </button>
-                      ))}
+                      {Array.from({ length: 30 }, (_, i) => i + 1).map((j) => {
+                        const isDownloaded = downloadedJuzs.includes(j.toString());
+                        const isSelected = selectedJuzs.includes(j.toString());
+                        return (
+                          <button
+                            key={j}
+                            onClick={() => toggleSelection(j.toString(), "juz")}
+                            className={`p-2 text-[10px] font-bold rounded-lg border transition-all ${isSelected ? "border-emerald-500" : isDownloaded ? "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-400 text-emerald-700 dark:text-emerald-400" : ""}`}
+                            style={{
+                              backgroundColor: isSelected
+                                ? `${currentTheme.accent}15`
+                                : isDownloaded ? undefined : `${currentTheme.text}05`,
+                              borderColor: isSelected
+                                ? currentTheme.accent
+                                : isDownloaded ? undefined : `${currentTheme.text}10`,
+                              color: isSelected
+                                ? "text-emerald-500"
+                                : isDownloaded ? undefined : currentTheme.text,
+                            }}
+                          >
+                            <div className="flex items-center justify-center gap-1">
+                              {isDownloaded && <Check size={10} />}
+                              <span>ج {j}</span>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -1638,11 +1819,12 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
                 <div className="flex gap-2">
                   <button
                     onClick={() => startDownload("tafseer")}
-                    className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${isDownloading ? "bg-red-500 text-white" : "text-white shadow-md active:scale-95"}`}
+                    disabled={!isDownloading && isAllSelectedDownloaded()}
+                    className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${isDownloading ? "bg-red-500 text-white" : "text-white shadow-md active:scale-95"} ${!isDownloading && isAllSelectedDownloaded() ? "opacity-50 grayscale cursor-not-allowed" : ""}`}
                     style={!isDownloading ? { backgroundColor: iconColor } : {}}
                   >
                     {isDownloading ? <X size={16} /> : <Download size={16} />}
-                    {isDownloading ? "إيقاف" : "تحميل"}
+                    {isDownloading ? "إيقاف" : isAllSelectedDownloaded() ? "محمل" : "تحميل"}
                   </button>
                   <button
                     onClick={() => setCurrentView("main")}
@@ -1745,7 +1927,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
                         ? MEMORIZATION_READERS
                         : currentView === "download_quran"
                           ? READERS
-                          : RECITERS
+                          : LISTEN_RECITERS
                       ).map((r) => (
                         <button
                           key={r.id}
@@ -1796,32 +1978,35 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
                       >
                         الكل
                       </button>
-                      {SURAH_NAMES_AR.map((name, i) => (
-                        <button
-                          key={i}
-                          onClick={() =>
-                            toggleSelection((i + 1).toString(), "surah")
-                          }
-                          className={`p-2 text-[10px] font-bold rounded-lg border transition-all ${selectedSurahs.includes((i + 1).toString()) ? "border-emerald-500" : ""}`}
-                          style={{
-                            backgroundColor: selectedSurahs.includes(
-                              (i + 1).toString(),
-                            )
-                              ? `${currentTheme.accent}15`
-                              : `${currentTheme.text}05`,
-                            borderColor: selectedSurahs.includes(
-                              (i + 1).toString(),
-                            )
-                              ? currentTheme.accent
-                              : `${currentTheme.text}10`,
-                            color: selectedSurahs.includes((i + 1).toString())
-                              ? "text-emerald-500"
-                              : currentTheme.text,
-                          }}
-                        >
-                          {name}
-                        </button>
-                      ))}
+                      {SURAH_NAMES_AR.map((name, i) => {
+                        const isDownloaded = downloadedSurahs.includes((i + 1).toString());
+                        const isSelected = selectedSurahs.includes((i + 1).toString());
+                        return (
+                          <button
+                            key={i}
+                            onClick={() =>
+                              toggleSelection((i + 1).toString(), "surah")
+                            }
+                            className={`p-2 text-[10px] font-bold rounded-lg border transition-all ${isSelected ? "border-emerald-500" : isDownloaded ? "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-400 text-emerald-700 dark:text-emerald-400" : ""}`}
+                            style={{
+                              backgroundColor: isSelected
+                                ? `${currentTheme.accent}15`
+                                : isDownloaded ? undefined : `${currentTheme.text}05`,
+                              borderColor: isSelected
+                                ? currentTheme.accent
+                                : isDownloaded ? undefined : `${currentTheme.text}10`,
+                              color: isSelected
+                                ? "text-emerald-500"
+                                : isDownloaded ? undefined : currentTheme.text,
+                            }}
+                          >
+                            <div className="flex items-center justify-center gap-1">
+                              {isDownloaded && <Check size={10} />}
+                              <span>{name}</span>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -1834,26 +2019,33 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
                       اختر الأجزاء
                     </label>
                     <div className="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto p-1 custom-scrollbar">
-                      {Array.from({ length: 30 }, (_, i) => i + 1).map((j) => (
-                        <button
-                          key={j}
-                          onClick={() => toggleSelection(j.toString(), "juz")}
-                          className={`p-2 text-[10px] font-bold rounded-lg border transition-all ${selectedJuzs.includes(j.toString()) ? "border-emerald-500" : ""}`}
-                          style={{
-                            backgroundColor: selectedJuzs.includes(j.toString())
-                              ? `${currentTheme.accent}15`
-                              : `${currentTheme.text}05`,
-                            borderColor: selectedJuzs.includes(j.toString())
-                              ? currentTheme.accent
-                              : `${currentTheme.text}10`,
-                            color: selectedJuzs.includes(j.toString())
-                              ? "text-emerald-500"
-                              : currentTheme.text,
-                          }}
-                        >
-                          ج {j}
-                        </button>
-                      ))}
+                      {Array.from({ length: 30 }, (_, i) => i + 1).map((j) => {
+                        const isDownloaded = downloadedJuzs.includes(j.toString());
+                        const isSelected = selectedJuzs.includes(j.toString());
+                        return (
+                          <button
+                            key={j}
+                            onClick={() => toggleSelection(j.toString(), "juz")}
+                            className={`p-2 text-[10px] font-bold rounded-lg border transition-all ${isSelected ? "border-emerald-500" : isDownloaded ? "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-400 text-emerald-700 dark:text-emerald-400" : ""}`}
+                            style={{
+                              backgroundColor: isSelected
+                                ? `${currentTheme.accent}15`
+                                : isDownloaded ? undefined : `${currentTheme.text}05`,
+                              borderColor: isSelected
+                                ? currentTheme.accent
+                                : isDownloaded ? undefined : `${currentTheme.text}10`,
+                              color: isSelected
+                                ? "text-emerald-500"
+                                : isDownloaded ? undefined : currentTheme.text,
+                            }}
+                          >
+                            <div className="flex items-center justify-center gap-1">
+                              {isDownloaded && <Check size={10} />}
+                              <span>ج {j}</span>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -1893,11 +2085,12 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
                         currentView === "download_listening" ? "surah" : "ayah",
                       )
                     }
-                    className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${isDownloading ? "bg-red-500 text-white" : "text-white shadow-md active:scale-95"}`}
+                    disabled={!isDownloading && isAllSelectedDownloaded()}
+                    className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${isDownloading ? "bg-red-500 text-white" : "text-white shadow-md active:scale-95"} ${!isDownloading && isAllSelectedDownloaded() ? "opacity-50 grayscale cursor-not-allowed" : ""}`}
                     style={!isDownloading ? { backgroundColor: iconColor } : {}}
                   >
                     {isDownloading ? <X size={16} /> : <Download size={16} />}
-                    {isDownloading ? "إيقاف" : "تحميل"}
+                    {isDownloading ? "إيقاف" : isAllSelectedDownloaded() ? "محمل" : "تحميل"}
                   </button>
                   <button
                     onClick={() => setCurrentView("download_quran_menu")}
@@ -2100,7 +2293,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
               {/* خيارات القراءة */}
               <MenuSection
                 title="خيارات القراءة"
-                iconColor={iconColor}
+                iconColor={sidebarIconColor}
                 titleColor="#2563eb"
                 currentTheme={currentTheme}
               >
@@ -2113,7 +2306,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
                       setReadingMode("mushaf");
                     })
                   }
-                  iconColor={iconColor}
+                  iconColor={sidebarIconColor}
                   isActive={readingMode === "mushaf"}
                   currentTheme={currentTheme}
                 />
@@ -2122,7 +2315,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
                   icon={<Book size={18} />}
                   label="التفسير"
                   onClick={() => handleAction(() => setReadingMode("tafseer"))}
-                  iconColor={iconColor}
+                  iconColor={sidebarIconColor}
                   isActive={readingMode === "tafseer"}
                   currentTheme={currentTheme}
                 />
@@ -2131,7 +2324,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
                   icon={<FileText size={18} />}
                   label="المعاني"
                   onClick={() => handleAction(() => setReadingMode("meanings"))}
-                  iconColor={iconColor}
+                  iconColor={sidebarIconColor}
                   isActive={readingMode === "meanings"}
                   currentTheme={currentTheme}
                 />
@@ -2142,7 +2335,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
                   onClick={() =>
                     handleAction(() => setReadingMode("translation"))
                   }
-                  iconColor={iconColor}
+                  iconColor={sidebarIconColor}
                   isActive={readingMode === "translation"}
                   currentTheme={currentTheme}
                 />
@@ -2151,7 +2344,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
               {/* الإعدادات والبحث */}
               <MenuSection
                 title="الإعدادات والبحث"
-                iconColor={iconColor}
+                iconColor={sidebarIconColor}
                 titleColor="#16a34a"
                 currentTheme={currentTheme}
               >
@@ -2160,7 +2353,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
                   icon={<Palette size={18} />}
                   label="المظهر"
                   onClick={() => setCurrentView("themes")}
-                  iconColor={iconColor}
+                  iconColor={sidebarIconColor}
                   currentTheme={currentTheme}
                 />
                 <MenuItem
@@ -2168,7 +2361,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
                   icon={<Search size={18} />}
                   label="البحث المتقدم"
                   onClick={() => handleAction(() => onNavigate('search'))}
-                  iconColor={iconColor}
+                  iconColor={sidebarIconColor}
                   currentTheme={currentTheme}
                 />
                 <MenuItem
@@ -2178,7 +2371,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
                   onClick={() =>
                     handleAction(() => openModal("settings-modal"))
                   }
-                  iconColor={iconColor}
+                  iconColor={sidebarIconColor}
                   currentTheme={currentTheme}
                 />
                 <MenuItem
@@ -2186,7 +2379,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
                   icon={<Bookmark size={18} />}
                   label="العلامات المرجعية"
                   onClick={() => setCurrentView("bookmarks")}
-                  iconColor={iconColor}
+                  iconColor={sidebarIconColor}
                   currentTheme={currentTheme}
                 />
               </MenuSection>
@@ -2194,7 +2387,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
               {/* اختصارات أخرى */}
               <MenuSection
                 title="اختصارات أخرى"
-                iconColor={iconColor}
+                iconColor={sidebarIconColor}
                 titleColor="#d97706"
                 currentTheme={currentTheme}
               >
@@ -2228,7 +2421,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
                           handleAction(() => onNavigate(shortcut.id));
                         }
                       }}
-                      iconColor={iconColor}
+                      iconColor={sidebarIconColor}
                       showChevron={false}
                       isActive={page === shortcut.id}
                       currentTheme={currentTheme}

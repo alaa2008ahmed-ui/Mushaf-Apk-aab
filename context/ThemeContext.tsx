@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, useMemo, ReactNode } from 'react';
+import React, { createContext, useState, useContext, useEffect, useLayoutEffect, useMemo, ReactNode } from 'react';
 import { presetThemes, Theme } from './themes';
 
 // State to be saved to localStorage
@@ -11,7 +11,6 @@ interface ThemeSettings {
         url: string;
         isVideo: boolean;
     };
-    showTopBars?: boolean;
 }
 
 interface ThemeContextType {
@@ -21,14 +20,12 @@ interface ThemeContextType {
     isPageLocked: boolean;
     isQuranPage: boolean;
     currentPage: string;
-    showTopBars: boolean;
     togglePageLock: () => void;
     applyPresetTheme: (themeKey: string) => void;
     setCustomBackground: (dataUrl: string, isVideo: boolean) => void;
     resetBackground: () => void;
     setIsGlobalTheme: (isGlobal: boolean) => void;
     setCurrentPage: (pageId: string) => void;
-    toggleTopBars: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -53,22 +50,21 @@ export const ThemeProvider = ({ children }: { children?: ReactNode }) => {
                     isGlobalTheme: parsed.isGlobalTheme !== undefined ? parsed.isGlobalTheme : true,
                     pageThemes: parsed.pageThemes || {},
                     lockedPages: parsed.lockedPages || [],
-                    customBg: parsed.customBg,
-                    showTopBars: parsed.showTopBars !== undefined ? parsed.showTopBars : true
+                    customBg: parsed.customBg
                 };
             }
-            return { themeKey: 'default', isGlobalTheme: true, pageThemes: {}, lockedPages: [], showTopBars: true };
+            return { themeKey: 'default', isGlobalTheme: true, pageThemes: {}, lockedPages: [] };
         } catch (e) {
-            return { themeKey: 'default', isGlobalTheme: true, pageThemes: {}, lockedPages: [], showTopBars: true };
+            return { themeKey: 'default', isGlobalTheme: true, pageThemes: {}, lockedPages: [] };
         }
     });
 
     const activeThemeKey = useMemo(() => {
         const pageKey = currentPage === 'quran' || currentPage === 'quran-landscape' || (currentPage && currentPage.startsWith('quran_')) || currentPage === 'search' ? 'quran' : currentPage;
 
-        // Exempt Quran reading context from global themes
+        // Exempt Quran reading context from global themes but default to default
         if (pageKey === 'quran') {
-            return 'default';
+            return settings.pageThemes[pageKey] || 'default';
         }
 
         // Home page ALWAYS follows the global theme key
@@ -93,7 +89,11 @@ export const ThemeProvider = ({ children }: { children?: ReactNode }) => {
             isGlass,
             cardBg: baseTheme.cardBg || (isDark ? '#1e293b' : '#ffffff'),
             cardBorder: baseTheme.cardBorder || (isDark ? '#334155' : '#e2e8f0'),
-            textColor: baseTheme.textColor || (isDark ? '#ffffff' : '#000000')
+            textColor: baseTheme.textColor || (isDark ? '#ffffff' : '#000000'),
+            accent: baseTheme.accent || baseTheme.palette[0],
+            accentText: baseTheme.accentText || '#ffffff',
+            modalBg: baseTheme.modalBg || baseTheme.cardBg || (isDark ? '#1e293b' : '#ffffff'),
+            modalText: baseTheme.modalText || baseTheme.textColor || (isDark ? '#ffffff' : '#000000')
         };
     }, [activeThemeKey]);
 
@@ -176,21 +176,32 @@ export const ThemeProvider = ({ children }: { children?: ReactNode }) => {
         saveSettings(newSettings as ThemeSettings);
     };
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         const root = document.documentElement;
         const videoBg = document.getElementById('video-background') as HTMLVideoElement;
 
-        // Apply visual updates immediately
-        document.body.style.transition = 'background-color 0.5s ease-in-out, color 0.5s ease-in-out';
-
         const pageKey = currentPage === 'quran' || currentPage === 'quran-landscape' || currentPage.startsWith('quran_') ? 'quran' : currentPage;
+        
+        // Apply visual updates immediately
+        const isReadingMode = pageKey === 'quran';
+        const isAppList = currentPage === 'more-menu';
+        const isPinned = settings.lockedPages?.includes(pageKey);
+        const isHome = currentPage === 'home';
+
+        if ((isPinned || isHome) && !isReadingMode && !isAppList) {
+            document.body.style.transition = 'none';
+        } else {
+            document.body.style.transition = 'background-color 0.5s ease-in-out, color 0.5s ease-in-out';
+        }
+
         if (pageKey === 'quran') {
             document.body.classList.add('quran-context');
         } else {
             document.body.classList.remove('quran-context');
         }
 
-        if (settings.showTopBars === false) {
+        const isHub = currentPage === 'home';
+        if (isHub) {
             document.body.classList.add('hide-top-bars');
         } else {
             document.body.classList.remove('hide-top-bars');
@@ -257,6 +268,12 @@ export const ThemeProvider = ({ children }: { children?: ReactNode }) => {
         
         const isDark = theme.isDark;
 
+        if (isDark) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
         root.style.setProperty('--bg-color', theme.bgColor || '#0D1B2A');
         root.style.setProperty('--text-color', theme.textColor);
         root.style.setProperty('--text-color-muted', isDark ? '#94a3b8' : '#64748b');
@@ -291,6 +308,24 @@ export const ThemeProvider = ({ children }: { children?: ReactNode }) => {
         root.style.setProperty('--badge-finished-bg', isDark ? 'rgba(74, 222, 128, 0.15)' : 'rgba(34, 197, 94, 0.1)');
         root.style.setProperty('--badge-finished-text', isDark ? '#4ade80' : '#16a34a');
 
+        root.style.setProperty('--qr-accent', theme.accent || theme.palette[0]);
+        const accentRgb = hexToRgb(theme.accent || theme.palette[0]);
+        if (accentRgb) root.style.setProperty('--qr-accent-rgb', accentRgb);
+        root.style.setProperty('--qr-accent-text', theme.accentText || '#ffffff');
+        
+        root.style.setProperty('--qr-modal-bg', theme.modalBg || quranCardBg);
+        root.style.setProperty('--qr-modal-text', theme.modalText || theme.textColor);
+        root.style.setProperty('--qr-card-bg', quranCardBg);
+        root.style.setProperty('--qr-card-border', quranCardBorder);
+        root.style.setProperty('--qr-card-text', theme.cardText || theme.textColor);
+        root.style.setProperty('--qr-bg', theme.bgColor || (isDark ? '#000000' : '#f3f4f6'));
+        root.style.setProperty('--qr-text', theme.textColor);
+        
+        root.style.setProperty('--qr-btn-bg', theme.btnBg || theme.accent || theme.palette[0]);
+        root.style.setProperty('--qr-btn-text', theme.btnText || theme.accentText || '#ffffff');
+        root.style.setProperty('--qr-header-bg', theme.headerBg || theme.topBarBg || theme.palette[0]);
+        root.style.setProperty('--qr-header-text', theme.headerText || theme.topBarText || '#ffffff');
+        root.style.setProperty('--qr-highlight-text', theme.highlightText || theme.accent || theme.palette[0]);
     }, [settings.customBg, theme, currentPage]);
 
     const isPageLocked = useMemo(() => {
@@ -331,10 +366,6 @@ export const ThemeProvider = ({ children }: { children?: ReactNode }) => {
         return pageKey === 'quran';
     }, [currentPage]);
 
-    const toggleTopBars = () => {
-        saveSettings({ ...settings, showTopBars: settings.showTopBars === false ? true : false });
-    };
-
     const contextValue = useMemo(() => ({
         theme,
         themeKey: activeThemeKey,
@@ -342,14 +373,12 @@ export const ThemeProvider = ({ children }: { children?: ReactNode }) => {
         isPageLocked,
         isQuranPage,
         currentPage,
-        showTopBars: settings.showTopBars !== false,
         togglePageLock,
         applyPresetTheme,
         setCustomBackground,
         resetBackground,
         setIsGlobalTheme,
-        setCurrentPage,
-        toggleTopBars
+        setCurrentPage
     }), [theme, settings, activeThemeKey, isPageLocked, currentPage]);
 
     return (

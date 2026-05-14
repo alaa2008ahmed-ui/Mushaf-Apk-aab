@@ -22,6 +22,9 @@ import { setupNotifications } from './utils/notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 import { clearSearchCache } from './pages/GlobalSearch';
+import { ScreenOrientation } from '@capacitor/screen-orientation';
+import { APP_VERSION, REMOTE_VERSION_URL, GOOGLE_PLAY_URL } from './constants';
+import UpdateNotificationModal from './components/UpdateNotificationModal';
 
 // --- Main App Component ---
 function App() {
@@ -33,6 +36,47 @@ function App() {
   const [isThemeSelectorOpen, setIsThemeSelectorOpen] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
+  
+  // --- Update Notification Logic ---
+  const [updateInfo, setUpdateInfo] = useState<{ show: boolean; newVersion: string }>({ show: false, newVersion: '' });
+
+  useEffect(() => {
+    const checkUpdate = async () => {
+      if (!REMOTE_VERSION_URL || REMOTE_VERSION_URL.includes('your-server.com')) return;
+
+      try {
+        // إضافة timestamp للرابط لمنع التخزين المؤقت (Cache Busting)
+        const cacheBuster = `t=${new Date().getTime()}`;
+        const fullUrl = REMOTE_VERSION_URL.includes('?') 
+          ? `${REMOTE_VERSION_URL}&${cacheBuster}` 
+          : `${REMOTE_VERSION_URL}?${cacheBuster}`;
+
+        const response = await fetch(fullUrl, { cache: 'no-store' });
+        
+        if (!response.ok) {
+          console.warn('Update check: Server returned error', response.status);
+          return;
+        }
+        
+        const data = await response.json();
+        const localVersion = APP_VERSION.trim();
+        const remoteVersion = (data?.version || '').toString().trim();
+
+        console.log(`Update check: Local [${localVersion}] Remote [${remoteVersion}]`);
+
+        if (remoteVersion && remoteVersion !== localVersion) {
+            console.log('Update found! Showing modal...');
+            setUpdateInfo({ show: true, newVersion: remoteVersion });
+        }
+      } catch (error) {
+        console.warn('Update check failed:', error);
+      }
+    };
+
+    // فحص التحديث بعد ثانية واحدة من التشغيل
+    const timeout = setTimeout(checkUpdate, 1000);
+    return () => clearTimeout(timeout);
+  }, []);
 
   useEffect(() => {
     const currentPage = history[history.length - 1];
@@ -47,6 +91,26 @@ function App() {
     if (currentPage === 'home' || currentPage === 'more-menu') {
       setLastMenuPage(currentPage);
     }
+
+    // --- Orientation Management ---
+    const handleOrientation = async () => {
+      if (!Capacitor.isNativePlatform()) return;
+      
+      try {
+        if (currentPage === 'quran-landscape') {
+          await ScreenOrientation.lock({ orientation: 'landscape' });
+        } else {
+          // If we are not in a landscape page, and we were previously in one (or just to be safe)
+          // we ensure portrait mode. 
+          // Note: ScreenOrientation.unlock() allows normal rotation, 
+          // but usually the main UI is better off in portrait.
+          await ScreenOrientation.lock({ orientation: 'portrait' });
+        }
+      } catch (e) {
+        console.error('Orientation management failed:', e);
+      }
+    };
+    handleOrientation();
   }, [history]);
 
   const handleNavigate = useCallback((pageId: string, params?: any) => {
@@ -59,7 +123,13 @@ function App() {
     ];
 
     if (pageId === 'phone-notifications') {
-      setNavParams({ openModal: 'notification-settings-modal', tab: 'phone' });
+      setNavParams({ openModal: 'notification-settings-modal' });
+      setHistory(prev => [...prev, 'quran']);
+      return;
+    }
+
+    if (pageId === 'settings') {
+      setNavParams({ openModal: 'settings-modal' });
       setHistory(prev => [...prev, 'quran']);
       return;
     }
@@ -117,21 +187,6 @@ function App() {
         
         // If we are navigating to the same page, do nothing
         if (current === pageId) return prev;
-
-        // Features list (all valid pages except home, more-menu)
-        const isMenu = (id: string) => id === 'home' || id === 'more-menu';
-        const isQuran = (id: string) => id === 'quran' || id === 'quran-landscape';
-
-        // If we are switching between features (and not coming from or going to a menu)
-        // we replace the last feature to keep history clean.
-        // Exception: quran reader stays in history if reached from another feature
-        // to allow returning to the previous feature (like daily-wird).
-        if (!isMenu(current) && !isMenu(pageId)) {
-          if (isQuran(pageId) && !isQuran(current)) {
-            return [...prev, pageId];
-          }
-          return [...prev.slice(0, -1), pageId];
-        }
 
         return [...prev, pageId];
       });
@@ -274,6 +329,8 @@ function App() {
             navigateBack={navigateBack}
             setIsThemeSelectorOpen={setIsThemeSelectorOpen}
             setShowExitConfirm={setShowExitConfirm}
+            updateInfo={updateInfo}
+            setUpdateInfo={setUpdateInfo}
           />
         </VoiceControlProvider>
       </PrayerTimesProvider>
@@ -293,7 +350,9 @@ function AppContent({
   handleNavigate, 
   navigateBack, 
   setIsThemeSelectorOpen, 
-  setShowExitConfirm 
+  setShowExitConfirm,
+  updateInfo,
+  setUpdateInfo
 }: any) {
   const { setCurrentPage: setVoicePage } = useVoiceControl();
   const { theme, themeKey, applyPresetTheme, setCurrentPage: setThemePage } = useTheme();
@@ -373,6 +432,16 @@ function AppContent({
               isOpen={showExitConfirm}
               onConfirm={handleConfirmExit}
               onClose={() => setShowExitConfirm(false)}
+              isLandscape={isLandscape}
+          />
+      )}
+
+      {updateInfo?.show && (
+          <UpdateNotificationModal 
+              isOpen={updateInfo.show}
+              onClose={() => setUpdateInfo({ ...updateInfo, show: false })}
+              newVersion={updateInfo.newVersion}
+              updateUrl={GOOGLE_PLAY_URL}
               isLandscape={isLandscape}
           />
       )}

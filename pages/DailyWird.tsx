@@ -23,13 +23,16 @@ interface WirdSettings {
 
 const TOTAL_PAGES = 604;
 
+import { registerBackInterceptor } from '../hooks/useBackButton';
+
 const DailyWird: React.FC<{ onBack: () => void; onNavigate: (page: string, params?: any) => void }> = ({ onBack, onNavigate }) => {
   const { theme, themeKey } = useTheme();
   const isDefaultTheme = themeKey === 'default';
   const isBlackAndWhite = themeKey === 'deep_black';
-  const primaryColor = isDefaultTheme ? '#000000' : (isBlackAndWhite ? '#FFFFFF' : theme.palette[0]);
-  const secondaryColor = isDefaultTheme ? '#000000' : (isBlackAndWhite ? '#FFFFFF' : (theme.palette[1] || theme.palette[0]));
-  const btnTextColor = isDefaultTheme ? '#000000' : (isBlackAndWhite ? '#000000' : '#FFFFFF');
+  const isBlackTheme = theme.bgColor === '#000000';
+  const primaryColor = isBlackTheme ? '#FFFFFF' : (isDefaultTheme ? '#000000' : (isBlackAndWhite ? '#FFFFFF' : theme.palette[0]));
+  const secondaryColor = isBlackTheme ? '#FFFFFF' : (isDefaultTheme ? '#000000' : (isBlackAndWhite ? '#FFFFFF' : (theme.palette[1] || theme.palette[0])));
+  const btnTextColor = isBlackTheme ? '#000000' : (isDefaultTheme ? '#000000' : (isBlackAndWhite ? '#000000' : '#FFFFFF'));
 
   const btnBorderParts = React.useMemo(() => {
     if (!theme.btnBorder || theme.btnBorder === 'none') {
@@ -400,13 +403,23 @@ const DailyWird: React.FC<{ onBack: () => void; onNavigate: (page: string, param
           <div className="flex gap-4">
             <button 
               onClick={() => setTempMode('days')}
-              className={`flex-1 py-3 rounded-xl border-2 transition-all ${tempMode === 'days' ? 'border-green-500 bg-green-500/10 text-green-600 dark:text-green-400' : (isDefaultTheme ? 'border-gray-200 bg-white text-black' : 'border-gray-300 dark:border-gray-600')}`}
+              className={`flex-1 py-3 rounded-xl border-2 transition-all ${tempMode === 'days' ? (isDefaultTheme ? 'border-black bg-white text-black' : '') : (isDefaultTheme ? 'border-gray-200 bg-white text-black' : 'border-gray-300 dark:border-gray-600 opacity-60')}`}
+              style={!isDefaultTheme && tempMode === 'days' ? { 
+                borderColor: primaryColor, 
+                backgroundColor: `${primaryColor}20`, 
+                color: theme.isDark ? '#FFFFFF' : primaryColor 
+              } : {}}
             >
               حسب الأيام
             </button>
             <button 
               onClick={() => setTempMode('pages')}
-              className={`flex-1 py-3 rounded-xl border-2 transition-all ${tempMode === 'pages' ? 'border-green-500 bg-green-500/10 text-green-600 dark:text-green-400' : (isDefaultTheme ? 'border-gray-200 bg-white text-black' : 'border-gray-300 dark:border-gray-600')}`}
+              className={`flex-1 py-3 rounded-xl border-2 transition-all ${tempMode === 'pages' ? (isDefaultTheme ? 'border-black bg-white text-black' : '') : (isDefaultTheme ? 'border-gray-200 bg-white text-black' : 'border-gray-300 dark:border-gray-600 opacity-60')}`}
+              style={!isDefaultTheme && tempMode === 'pages' ? { 
+                borderColor: primaryColor, 
+                backgroundColor: `${primaryColor}20`, 
+                color: theme.isDark ? '#FFFFFF' : primaryColor 
+              } : {}}
             >
               حسب الصفحات
             </button>
@@ -527,13 +540,13 @@ const DailyWird: React.FC<{ onBack: () => void; onNavigate: (page: string, param
         <div id="wird-progress-container" className="rounded-2xl p-4 shadow-lg border" style={{ backgroundColor: isDefaultTheme ? '#FFFFFF' : 'var(--card-bg)', borderColor: isDefaultTheme ? '#e5e7eb' : 'var(--card-border)', color: isDefaultTheme ? '#000000' : 'inherit' }}>
           <div className="flex justify-between mb-1">
             <span className="font-bold text-sm">نسبة الإنجاز</span>
-            <span className={`font-bold ${isDefaultTheme ? 'text-black' : 'text-green-500 dark:text-green-400'} text-sm`}>{progress.toFixed(1)}%</span>
+            <span className={`font-bold ${isDefaultTheme ? 'text-black' : (isBlackTheme ? 'text-white' : 'text-green-500 dark:text-green-400')} text-sm`}>{progress.toFixed(1)}%</span>
           </div>
           <div className="w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: isDefaultTheme ? '#f3f4f6' : (theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') }}>
             <motion.div 
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
-              className={`h-full ${isDefaultTheme ? 'bg-black' : 'bg-gradient-to-r from-green-500 to-emerald-400'}`}
+              className={`h-full ${isDefaultTheme ? 'bg-black' : (isBlackTheme ? 'bg-white' : 'bg-gradient-to-r from-green-500 to-emerald-400')}`}
             />
           </div>
           <div className="flex justify-between mt-1 text-xs opacity-80">
@@ -636,11 +649,15 @@ const DailyWird: React.FC<{ onBack: () => void; onNavigate: (page: string, param
                   <button 
                     onClick={() => onNavigate('home')}
                     className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors text-sm border shadow-sm ${isDefaultTheme ? 'bg-white text-black border border-gray-200' : ''}`}
-                    style={!isDefaultTheme ? { 
+                    style={isBlackTheme ? {
+                      backgroundColor: '#000000',
+                      color: '#FFFFFF',
+                      borderColor: '#FFFFFF'
+                    } : (!isDefaultTheme ? { 
                       backgroundColor: isBlackAndWhite ? 'rgba(255,255,255,0.1)' : `${secondaryColor}10`, 
                       color: isBlackAndWhite ? '#FFFFFF' : secondaryColor,
                       borderColor: isBlackAndWhite ? 'rgba(255,255,255,0.2)' : `${secondaryColor}30`
-                    } : {}}
+                    } : {})}
                   >
                     <Home size={20} />
                     الرئيسية
@@ -693,7 +710,7 @@ const DailyWird: React.FC<{ onBack: () => void; onNavigate: (page: string, param
           style={{ backgroundColor: isDefaultTheme ? '#FFFFFF' : 'var(--card-bg)', borderColor: isDefaultTheme ? '#e5e7eb' : 'var(--card-border)', color: isDefaultTheme ? '#000000' : 'inherit' }}
         >
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDefaultTheme ? 'bg-black/5 text-black' : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'}`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDefaultTheme ? 'bg-black/5 text-black' : (isBlackTheme ? 'bg-white text-black' : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400')}`}>
               <User size={20} />
             </div>
             <div className="text-right">
@@ -725,12 +742,12 @@ const DailyWird: React.FC<{ onBack: () => void; onNavigate: (page: string, param
                     setActiveId(profile.id);
                     setShowProfileMenu(false);
                   }}
-                  className={`p-4 flex items-center justify-between border-b last:border-0 cursor-pointer transition-colors ${activeId === profile.id ? (isDefaultTheme ? 'bg-black/5' : 'bg-emerald-500/10') : 'hover:bg-gray-500/5'}`}
+                  className={`p-4 flex items-center justify-between border-b last:border-0 cursor-pointer transition-colors ${activeId === profile.id ? (isDefaultTheme ? 'bg-black/5' : (isBlackTheme ? 'bg-white/10' : 'bg-emerald-500/10')) : 'hover:bg-gray-500/5'}`}
                   style={{ borderColor: isDefaultTheme ? '#f3f4f6' : theme.cardBorder }}
                 >
                   <div className="flex items-center gap-3 flex-1">
-                    <User size={18} className={activeId === profile.id ? (isDefaultTheme ? 'text-black' : 'text-emerald-500') : 'opacity-40'} />
-                    <span className={activeId === profile.id ? (isDefaultTheme ? 'font-bold' : 'font-bold text-emerald-600 dark:text-emerald-400') : ''}>{profile.name}</span>
+                    <User size={18} className={activeId === profile.id ? (isDefaultTheme ? 'text-black' : (isBlackTheme ? 'text-white' : 'text-emerald-500')) : 'opacity-40'} />
+                    <span className={activeId === profile.id ? (isDefaultTheme ? 'font-bold' : (`font-bold ${isBlackTheme ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`)) : ''}>{profile.name}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <button 
@@ -755,7 +772,7 @@ const DailyWird: React.FC<{ onBack: () => void; onNavigate: (page: string, param
                   handleAddNew();
                   setShowProfileMenu(false);
                 }}
-                className={`w-full p-4 flex items-center justify-center gap-2 font-bold transition-colors ${isDefaultTheme ? 'text-black hover:bg-black/5' : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/5'}`}
+                className={`w-full p-4 flex items-center justify-center gap-2 font-bold transition-colors ${isDefaultTheme ? 'text-black hover:bg-black/5' : (isBlackTheme ? 'text-white hover:bg-white/10' : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/5')}`}
               >
                 <Plus size={20} />
                 إضافة مستخدم جديد
@@ -818,16 +835,55 @@ const DailyWird: React.FC<{ onBack: () => void; onNavigate: (page: string, param
     );
   };
 
+  const handleHomeClick = () => {
+    if (showDeleteConfirm) {
+      setShowDeleteConfirm(null);
+    } else if (showResetConfirm) {
+      setShowResetConfirm(false);
+    } else if (showProfileMenu) {
+      setShowProfileMenu(false);
+    } else if (showSettings && allSettings.length > 0) {
+      setShowSettings(false);
+    } else {
+      onBack();
+    }
+  };
+
+  useEffect(() => {
+    const interceptor = () => {
+      if (showDeleteConfirm) {
+        setShowDeleteConfirm(null);
+        return true;
+      }
+      if (showResetConfirm) {
+        setShowResetConfirm(false);
+        return true;
+      }
+      if (showProfileMenu) {
+        setShowProfileMenu(false);
+        return true;
+      }
+      if (showSettings && allSettings.length > 0) {
+        setShowSettings(false);
+        return true;
+      }
+      return false;
+    };
+
+    const unregister = registerBackInterceptor(interceptor);
+    return unregister;
+  }, [showDeleteConfirm, showResetConfirm, showProfileMenu, showSettings, allSettings.length]);
+
   return (
     <div className="h-screen flex flex-col bg-transparent" style={{ fontFamily: theme.font, backgroundColor: isDefaultTheme ? '#FFFFFF' : 'transparent', color: isDefaultTheme ? '#000000' : 'var(--text-color)' }}>
-      <header className="app-top-bar shrink-0 relative z-10">
+      <header className="app-top-bar">
         <div className="app-top-bar__inner">
           <div className="relative flex items-center justify-center w-full">
             <div className="absolute left-0">
               <ThemePageLock />
             </div>
-            <h1 className={`app-top-bar__title text-2xl font-kufi flex items-center justify-center gap-2 ${isDefaultTheme ? 'text-black' : ''}`}>
-              <span className={isDefaultTheme ? '' : 'text-green-500 dark:text-green-400'}>📅</span>
+            <h1 className="app-top-bar__title text-2xl font-kufi flex items-center justify-center gap-2">
+              <span>📅</span>
               الورد اليومي
             </h1>
           </div>
@@ -835,7 +891,7 @@ const DailyWird: React.FC<{ onBack: () => void; onNavigate: (page: string, param
         </div>
       </header>
 
-      <main className={`flex-1 min-h-0 overflow-y-auto p-4 flex flex-col items-center pb-4 ${isInputFocused ? 'justify-start' : 'justify-center'}`}>
+      <main className={`flex-1 min-h-0 overflow-y-auto px-4 pb-4 flex flex-col items-center ${isInputFocused ? 'justify-start' : 'justify-center'}`}>
         <div className="w-full max-w-md pb-10">
           {!showSettings && renderProfileSelector()}
           {showSettings || !settings ? renderSettings() : renderProgress()}
@@ -843,7 +899,7 @@ const DailyWird: React.FC<{ onBack: () => void; onNavigate: (page: string, param
         <div className="shrink-0 w-full h-32"></div>
       </main>
 
-      {!isInputFocused && <BottomBar onHomeClick={onBack} onThemesClick={() => {}} showThemes={false} />}
+      {!isInputFocused && <BottomBar onHomeClick={handleHomeClick} onThemesClick={() => {}} showThemes={false} />}
 
       {renderDeleteConfirmModal()}
 
