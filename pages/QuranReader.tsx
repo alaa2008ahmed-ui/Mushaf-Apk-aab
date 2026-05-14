@@ -42,6 +42,8 @@ import { memorizationService } from '../services/memorizationService';
 import { registerBackInterceptor } from '../hooks/useBackButton';
 import { parseVoiceCommand, normalizeArabic } from '../utils/voiceParser';
 import { useTheme } from '../context/ThemeContext';
+import { useAudioStore } from '../hooks/useAudioStore';
+import { App as CapacitorApp } from '@capacitor/app';
 
 declare var window: any;
 
@@ -1235,9 +1237,11 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
     const autoScrollFrameRef = useRef<number | null>(null);
     const landscapeAutoHideTimerRef = useRef<NodeJS.Timeout | null>(null);
     const lastScrollTimeRef = useRef<number>(0);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [isAudioLoading, setIsAudioLoading] = useState(false);
-    const [playingAyah, setPlayingAyah] = useState<{s: number; a: number} | null>(null);
+    const { 
+        isPlaying, setIsPlaying, 
+        isAudioLoading, setIsAudioLoading, 
+        playingAyah, setPlayingAyah 
+    } = useAudioStore();
     
     const [tafseerInfo, setTafseerInfo] = useState({ isOpen: false, s: 0, a: 0, text: '', surahName: '', wasAutoscrolling: false });
     const [tafseerSelectionInfo, setTafseerSelectionInfo] = useState({ isOpen: false, s: 0, a: 0, wasAutoscrolling: false });
@@ -1580,13 +1584,26 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
         setIsPlaying(false);
         setIsAudioLoading(false);
         setPlayingAyah(null);
-    }, []);
+    }, [setIsPlaying, setIsAudioLoading, setPlayingAyah]);
 
     const isSessionFinishedRef = useRef(false);
 
     // Stop audio on unmount and save memorization session if active
     useEffect(() => {
+        const handleStopAudio = () => stopAudio();
+        window.addEventListener('quran-stop-audio', handleStopAudio);
+
+        // Stop audio when app is backgrounded (minimized)
+        const appStateListener = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+            if (!isActive) {
+                stopAudio();
+            }
+        });
+
         return () => {
+            window.removeEventListener('quran-stop-audio', handleStopAudio);
+            appStateListener.then(l => l.remove());
+            
             if (localIsMemorizationMode && !isSessionFinishedRef.current) {
                 const sessionData = {
                     currentAyah: currentAyahRef.current,
@@ -1665,10 +1682,13 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
 
     const toggleFloatingMenu = useCallback(() => {
         setIsFloatingMenuOpen(prev => {
-            if (!prev) setFloatingMenuInitialView('main');
+            if (!prev) {
+                setFloatingMenuInitialView('main');
+                stopAudio();
+            }
             return !prev;
         });
-    }, []);
+    }, [stopAudio]);
 
     const handleCloseSajdahCard = () => {
         const wasFromMenu = sajdahCardInfo.openedFromMenu;
@@ -2150,7 +2170,8 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
     }, []);
 
     const handleAyahLongPress = useCallback((s: number, a: number, x: number, y: number) => {
-        setAyahContextColorField(null); // Reset color field to hide colors by default
+        stopAudio();
+        setAyahContextColorField(null); 
         setAyahContextMenu({ 
             isOpen: true, 
             isCustomizing: true, 

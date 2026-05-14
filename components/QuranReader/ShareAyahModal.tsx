@@ -1019,7 +1019,7 @@ const ShareAyahModal: React.FC<ShareAyahModalProps> = ({
                 <div className="flex-1 w-full flex flex-col overflow-hidden" style={{ color: currentTheme.textColor || '#000000' }}>
                     
                     {/* Full Screen Modal Header */}
-                    <div className="p-3 border-b flex items-center justify-center shrink-0" style={{ backgroundColor: currentTheme.background || '#ffffff', borderColor: currentTheme.id === 'night' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }}>
+                    <div className="p-3 border-b flex items-center justify-center shrink-0" style={{ backgroundColor: currentTheme.background || '#ffffff', borderColor: currentTheme.id === 'night' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}>
                         <h3 className="text-sm font-bold" style={{ color: currentTheme.textColor }}>خيارات المشاركة</h3>
                     </div>
 
