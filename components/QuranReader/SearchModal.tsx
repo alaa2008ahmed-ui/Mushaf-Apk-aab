@@ -21,7 +21,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ quranData, onSelect, onClose,
 
     useEffect(() => {
         if (Capacitor.isNativePlatform()) {
-            Keyboard.setScroll({ scroll: false });
+            Keyboard.setScroll({ isDisabled: true });
             const showListener = Keyboard.addListener('keyboardWillShow', info => {
                 setKeyboardHeight(info.keyboardHeight);
             });
