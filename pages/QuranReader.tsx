@@ -268,32 +268,31 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
             if (initialLandscape) return;
             
             // Ignore resize if keyboard is likely open to prevent orientation flip
-            if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+            const activeEl = document.activeElement;
+            const isInputActive = activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA' || activeEl?.getAttribute('contenteditable') === 'true';
+            
+            if (isInputActive) {
                 return;
             }
 
-            let isL = false;
+            const width = window.innerWidth;
+            const height = window.innerHeight;
             
-            // On Native platforms or modern browsers, screen.orientation is most reliable.
-            // It completely ignores software keyboards.
-            if (window.screen && window.screen.orientation && window.screen.orientation.type) {
-                isL = window.screen.orientation.type.includes('landscape');
-            } else if (typeof window.orientation !== 'undefined') {
-                // Older iOS / Safari
-                isL = Math.abs(Number(window.orientation)) === 90;
-            } else if (window.screen && window.screen.width && window.screen.height) {
-                // Fallback to hardware screen dimensions
-                isL = window.screen.width > window.screen.height;
-            } else {
-                // Last resort fallback - but we check if keyboard is hidden to avoid false landscape
-                const isKeyboardOpen = document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA';
-                if (!isKeyboardOpen) {
-                    isL = window.matchMedia("(orientation: landscape)").matches;
-                } else {
-                    isL = isLandscapeRef.current; // Keep current if keyboard is open
-                }
+            // Check if height changed drastically (likely keyboard)
+            // A typical keyboard takes 30-50% of the screen.
+            // If the ratio width/height increased but absolute height decreased a lot, it's likely keyboard.
+            // But matchMedia is better for this.
+            
+            // Use matchMedia for more reliable orientation detection that ignores keyboard height
+            let isL = window.matchMedia("(orientation: landscape)").matches;
+            
+            // Re-validate: if it claims landscape but height is EXTREMELY small relative to width on a mobile device,
+            // or if it's a mobile device and width < 600, it's probably just a resize.
+            // Most phones in landscape are > 600px wide.
+            if (isL && width < 600 && (navigator.userAgent.includes('Mobi') || navigator.userAgent.includes('Android'))) {
+                return;
             }
-
+            
             // Only auto-switch to landscape mode on mobile/native devices. 
             // On desktop/preview, a wide window shouldn't force the mobile landscape reading UI 
             // which hides toolbars and share buttons.
@@ -338,6 +337,11 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
     const posSuffix = getScopedSuffix(readingMode);
     const themeSuffix = posSuffix; // Always scope settings/themes strictly per mode
 
+    const getOtherOrientSuffix = useCallback((mode: string) => {
+        if (mode.endsWith('_h')) return mode.replace('_h', '_v');
+        if (mode.endsWith('_v')) return mode.replace('_v', '_h');
+        return mode;
+    }, []);
 
     const [quranData, setQuranData] = useState(quranJsonData);
 
@@ -931,7 +935,8 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
             return initialSettings;
         });
 
-        const themeId = localStorage.getItem('current_theme_id' + mode) || 'black';
+        const otherConfigMode = mode.endsWith('_h') ? mode.replace('_h', '_v') : mode.replace('_v', '_h');
+        const themeId = localStorage.getItem('current_theme_id' + mode) || localStorage.getItem('current_theme_id' + otherConfigMode) || 'black';
         const newTheme = THEMES[themeId as keyof typeof THEMES] || THEMES['black'];
         
         setCurrentTheme(prev => {
@@ -1309,20 +1314,16 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
 
     const [settings, setSettings] = useState(() => {
         const mode = getScopedSuffix(readingMode, initialLandscape);
-        const saved = localStorage.getItem('quran_settings' + mode);
+        const otherMode = mode.endsWith('_h') ? mode.replace('_h', '_v') : (mode.endsWith('_v') ? mode.replace('_v', '_h') : mode);
+        const saved = localStorage.getItem('quran_settings' + mode) || localStorage.getItem('quran_settings' + otherMode);
         const defaultTheme = THEMES['black'];
-        return saved ? JSON.parse(saved) : {
-            fontSize: 1.7, fontFamily: defaultTheme.font, textColor: defaultTheme.text, bgColor: defaultTheme.bg,
-            highlightTextColor: defaultTheme.highlightText || defaultTheme.accent,
-            reader: 'Abu_Bakr_Ash-Shaatree_128kbps', theme: 'black', scrollMinutes: 20, tafseer: 'ar.jalalayn',
-            hideUIOnAutoScroll: false,
-            lockHighlightColor: false
-        };
+        return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : { ...DEFAULT_SETTINGS, fontFamily: defaultTheme.font, textColor: "", bgColor: "" };
     });
 
     const [currentTheme, setCurrentTheme] = useState(() => {
         const mode = getScopedSuffix(readingMode, initialLandscape);
-        const themeId = localStorage.getItem('current_theme_id' + mode) || 'black';
+        const otherMode = mode.endsWith('_h') ? mode.replace('_h', '_v') : (mode.endsWith('_v') ? mode.replace('_v', '_h') : mode);
+        const themeId = localStorage.getItem('current_theme_id' + mode) || localStorage.getItem('current_theme_id' + otherMode) || 'black';
         return THEMES[themeId as keyof typeof THEMES] || THEMES['black'];
     });
 
@@ -2400,8 +2401,9 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
 
     useEffect(() => {
         const handleThemeChange = () => {
-            const mode = themeSuffix;
-            const themeId = localStorage.getItem('current_theme_id' + mode) || 'black';
+            const modeSuffix = themeSuffix;
+            const otherMode = getOtherOrientSuffix(modeSuffix);
+            const themeId = localStorage.getItem('current_theme_id' + modeSuffix) || localStorage.getItem('current_theme_id' + otherMode) || 'black';
             const newTheme = THEMES[themeId as keyof typeof THEMES] || THEMES['black'];
             
             setCurrentTheme(prev => {
@@ -2409,7 +2411,7 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
                 return newTheme;
             });
 
-            const savedSettings = localStorage.getItem('quran_settings' + mode);
+            const savedSettings = localStorage.getItem('quran_settings' + modeSuffix) || localStorage.getItem('quran_settings' + otherMode);
             if (savedSettings) {
                 const parsed = JSON.parse(savedSettings);
                 const newSettings = { ...DEFAULT_SETTINGS, ...parsed };
@@ -2424,7 +2426,7 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
                 });
             }
 
-            const savedToolbarColors = localStorage.getItem('toolbar_colors_v2' + mode);
+            const savedToolbarColors = localStorage.getItem('toolbar_colors_v2' + modeSuffix) || localStorage.getItem('toolbar_colors_v2' + otherMode);
             if (savedToolbarColors) {
                 try {
                     const parsed = JSON.parse(savedToolbarColors);
@@ -2459,7 +2461,7 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
             
             setQuranData(quranJsonData);
 
-            const transSetting = localStorage.getItem('transparent_mode' + mode) === 'true';
+            const transSetting = localStorage.getItem('transparent_mode' + modeSuffix) === 'true';
             if (isTransparentMode !== transSetting) setIsTransparentMode(transSetting);
 
             const savedBookmarks = localStorage.getItem('quran_bookmarks_list' + bookmarkSuffix);
@@ -2469,11 +2471,11 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
                 return parsedBookmarks;
             });
 
-            const savedSajdah = localStorage.getItem('show_sajdah_card' + mode);
+            const savedSajdah = localStorage.getItem('show_sajdah_card' + modeSuffix);
             const targetSajdah = savedSajdah !== null ? savedSajdah === 'true' : true;
             if (showSajdahCard !== targetSajdah) setShowSajdahCard(targetSajdah);
 
-            if (mode.endsWith('_h')) {
+            if (modeSuffix.endsWith('_h')) {
                 setIsLandscapeUIHidden(true);
             } else {
                 if (!isHideToolbarsEnabledRef.current && isLandscapeUIHidden !== false) setIsLandscapeUIHidden(false);
@@ -2481,7 +2483,8 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
         };
         const handleSettingsChange = () => {
             const mode = themeSuffix;
-            const saved = localStorage.getItem('quran_settings' + mode);
+            const otherMode = getOtherOrientSuffix(mode);
+            const saved = localStorage.getItem('quran_settings' + mode) || localStorage.getItem('quran_settings' + otherMode);
             if (saved) {
                 const parsed = JSON.parse(saved);
                 const newSettings = { ...DEFAULT_SETTINGS, ...parsed };
@@ -2491,7 +2494,7 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
                 });
             }
             
-            const savedToolbarColors = localStorage.getItem('toolbar_colors_v2' + mode);
+            const savedToolbarColors = localStorage.getItem('toolbar_colors_v2' + mode) || localStorage.getItem('toolbar_colors_v2' + otherMode);
             if (savedToolbarColors) {
                 try {
                     const parsed = JSON.parse(savedToolbarColors);
@@ -2540,25 +2543,25 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
     // Initial load for the current themeSuffix
     useEffect(() => {
         const mode = themeSuffix;
-        const themeId = localStorage.getItem('current_theme_id' + mode);
+        const otherMode = getOtherOrientSuffix(mode);
+        const themeId = localStorage.getItem('current_theme_id' + mode) || localStorage.getItem('current_theme_id' + otherMode) || 'black';
+        const newTheme = THEMES[themeId as keyof typeof THEMES] || THEMES['black'];
         
-        // If we found a specific theme for this mode, use it. 
-        // If not, we SHOULD NOT jump back to default 'black' if the previous mode had a theme.
-        // Actually, we should check if there's a global theme, but here we are in a per-mode setup.
+        setCurrentTheme(prev => {
+            if (prev?.id === newTheme.id) return prev;
+            return newTheme;
+        });
         
-        if (themeId) {
-            const newTheme = THEMES[themeId as keyof typeof THEMES];
-            if (newTheme) setCurrentTheme(newTheme);
-        }
-        
-        const saved = localStorage.getItem('quran_settings' + mode);
+        const saved = localStorage.getItem('quran_settings' + mode) || localStorage.getItem('quran_settings' + otherMode);
         if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                setSettings((prev: any) => ({ ...DEFAULT_SETTINGS, ...prev, ...parsed }));
-            } catch(e) {}
+            const parsed = JSON.parse(saved);
+            const newSettings = { ...DEFAULT_SETTINGS, ...parsed };
+            setSettings(prev => {
+                if (JSON.stringify(prev) === JSON.stringify(newSettings)) return prev;
+                return newSettings;
+            });
         }
-    }, [themeSuffix]);
+    }, [themeSuffix, getOtherOrientSuffix]);
 
     const handleMarkWirdCompleted = useCallback((shouldContinue = false) => {
         const saved = localStorage.getItem('dailyWirdSettings_v2');
@@ -2608,7 +2611,6 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
         
         // Set Theme CSS Variables
         root.style.setProperty('--qr-bg', settings.bgColor || t.bg);
-        document.body.style.backgroundColor = settings.bgColor || t.bg;
         root.style.setProperty('--qr-text', settings.textColor || t.text);
         root.style.setProperty('--qr-fontFamily', settings.fontFamily || t.font);
         root.style.setProperty('--qr-bar-bg', t.barBg);
