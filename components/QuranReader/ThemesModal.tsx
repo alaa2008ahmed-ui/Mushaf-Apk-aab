@@ -92,7 +92,8 @@ const ThemesModal: React.FC<ThemesModalProps> = ({ onClose, showToast, isLandsca
         };
         localStorage.setItem('quran_settings' + modeSuffix, JSON.stringify(updatedSettings));
 
-        // Dispatch a custom event to notify the main component to reload theme
+        // Dispatch events to notify main component
+        window.dispatchEvent(new Event('settings-change'));
         window.dispatchEvent(new Event('theme-change'));
         
         showToast(`تم تطبيق ثيم: ${theme.name}`);

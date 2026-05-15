@@ -272,12 +272,28 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
                 return;
             }
 
-            const width = window.innerWidth;
-            const height = window.innerHeight;
+            let isL = false;
             
-            // Use matchMedia for more reliable orientation detection that ignores keyboard height
-            let isL = window.matchMedia("(orientation: landscape)").matches;
-            
+            // On Native platforms or modern browsers, screen.orientation is most reliable.
+            // It completely ignores software keyboards.
+            if (window.screen && window.screen.orientation && window.screen.orientation.type) {
+                isL = window.screen.orientation.type.includes('landscape');
+            } else if (typeof window.orientation !== 'undefined') {
+                // Older iOS / Safari
+                isL = Math.abs(Number(window.orientation)) === 90;
+            } else if (window.screen && window.screen.width && window.screen.height) {
+                // Fallback to hardware screen dimensions
+                isL = window.screen.width > window.screen.height;
+            } else {
+                // Last resort fallback - but we check if keyboard is hidden to avoid false landscape
+                const isKeyboardOpen = document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA';
+                if (!isKeyboardOpen) {
+                    isL = window.matchMedia("(orientation: landscape)").matches;
+                } else {
+                    isL = isLandscapeRef.current; // Keep current if keyboard is open
+                }
+            }
+
             // Only auto-switch to landscape mode on mobile/native devices. 
             // On desktop/preview, a wide window shouldn't force the mobile landscape reading UI 
             // which hides toolbars and share buttons.
@@ -2524,13 +2540,23 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
     // Initial load for the current themeSuffix
     useEffect(() => {
         const mode = themeSuffix;
-        const themeId = localStorage.getItem('current_theme_id' + mode) || 'black';
-        const newTheme = THEMES[themeId as keyof typeof THEMES] || THEMES['black'];
-        setCurrentTheme(newTheme);
+        const themeId = localStorage.getItem('current_theme_id' + mode);
+        
+        // If we found a specific theme for this mode, use it. 
+        // If not, we SHOULD NOT jump back to default 'black' if the previous mode had a theme.
+        // Actually, we should check if there's a global theme, but here we are in a per-mode setup.
+        
+        if (themeId) {
+            const newTheme = THEMES[themeId as keyof typeof THEMES];
+            if (newTheme) setCurrentTheme(newTheme);
+        }
         
         const saved = localStorage.getItem('quran_settings' + mode);
         if (saved) {
-            setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(saved) });
+            try {
+                const parsed = JSON.parse(saved);
+                setSettings((prev: any) => ({ ...DEFAULT_SETTINGS, ...prev, ...parsed }));
+            } catch(e) {}
         }
     }, [themeSuffix]);
 
@@ -2582,6 +2608,7 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
         
         // Set Theme CSS Variables
         root.style.setProperty('--qr-bg', settings.bgColor || t.bg);
+        document.body.style.backgroundColor = settings.bgColor || t.bg;
         root.style.setProperty('--qr-text', settings.textColor || t.text);
         root.style.setProperty('--qr-fontFamily', settings.fontFamily || t.font);
         root.style.setProperty('--qr-bar-bg', t.barBg);

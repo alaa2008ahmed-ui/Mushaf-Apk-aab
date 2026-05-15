@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toArabic } from './constants';
 import { X } from 'lucide-react';
-import { Keyboard } from '@capacitor/keyboard';
+import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
 import { Capacitor } from '@capacitor/core';
 import { renderTajweedTextHtml } from './MushafPage';
 
@@ -17,23 +17,6 @@ interface SearchModalProps {
 
 const SearchModal: React.FC<SearchModalProps> = ({ quranData, onSelect, onClose, isLandscape, initialQuery, readingMode = 'mushaf', currentTheme }) => {
     const modeSuffix = readingMode === 'mushaf' ? (isLandscape ? '_h' : '_v') : `_${readingMode}_${isLandscape ? 'h' : 'v'}`;
-    const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-    useEffect(() => {
-        if (Capacitor.isNativePlatform()) {
-            Keyboard.setScroll({ isDisabled: true });
-            const showListener = Keyboard.addListener('keyboardWillShow', info => {
-                setKeyboardHeight(info.keyboardHeight);
-            });
-            const hideListener = Keyboard.addListener('keyboardWillHide', () => {
-                setKeyboardHeight(0);
-            });
-            return () => {
-                showListener.then(l => l.remove());
-                hideListener.then(l => l.remove());
-            };
-        }
-    }, []);
 
     const [query, setQuery] = useState(() => initialQuery || localStorage.getItem('search_query' + modeSuffix) || '');
     const [results, setResults] = useState<any[]>(() => {
@@ -45,6 +28,32 @@ const SearchModal: React.FC<SearchModalProps> = ({ quranData, onSelect, onClose,
     const [searchStats, setSearchStats] = useState('');
     const [expandedSurahs, setExpandedSurahs] = useState<Record<number, boolean>>({});
     const searchJobIdRef = useRef(0);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const input = inputRef.current;
+        if (input && initialQuery) {
+            input.focus();
+        }
+
+        // Apply theme background to body to prevent flashes of orientation or phone background
+        const originalBg = document.body.style.backgroundColor;
+        if (currentTheme?.bg) {
+            document.body.style.backgroundColor = currentTheme.bg;
+        }
+
+        // Handle keyboard resize mode on Native to prevent layout flicker and false orientation switches
+        if (Capacitor.isNativePlatform()) {
+            Keyboard.setResizeMode({ mode: KeyboardResize.None }).catch(() => {});
+        }
+
+        return () => {
+            document.body.style.backgroundColor = originalBg;
+            if (Capacitor.isNativePlatform()) {
+                Keyboard.setResizeMode({ mode: KeyboardResize.Native }).catch(() => {});
+            }
+        };
+    }, [initialQuery, currentTheme]);
     const searchTimeoutRef = useRef<any>(null);
 
     const stripTajweedTags = (text: string) => {
@@ -242,7 +251,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ quranData, onSelect, onClose,
     };
 
     return (
-        <div className="fixed z-[1200] flex items-center justify-center overflow-hidden" style={{ top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.5)' }} dir="rtl" onClick={onClose}>
+        <div className="fixed z-[1200] flex items-center justify-center overflow-hidden" style={{ top: 0, bottom: 0, left: 0, right: 0, backgroundColor: currentTheme?.bg || '#ffffff' }} dir="rtl" onClick={onClose}>
             <div className="w-full h-full flex flex-col overflow-hidden shadow-none border-[4px]" style={{ backgroundColor: currentTheme?.bg || '#ffffff', borderColor: currentTheme?.accent || '#3b82f6' }} onClick={e => e.stopPropagation()}>
                 <div className="flex-1 w-full flex flex-col overflow-hidden" style={{ color: currentTheme?.text || '#000000' }}>
                     
@@ -255,6 +264,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ quranData, onSelect, onClose,
                     <div className="p-4 border-b shrink-0 z-10" style={{ backgroundColor: currentTheme?.bg || '#ffffff', borderColor: currentTheme?.id === 'night' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }}>
                         <div className="relative">
                             <input 
+                                ref={inputRef}
                                 type="text" 
                                 value={query}
                                 onChange={(e) => handleSearchInput(e.target.value)}
@@ -291,7 +301,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ quranData, onSelect, onClose,
                         className={`flex-1 overflow-y-auto p-4 relative space-y-2 scrollbar-hide`} 
                         style={{ 
                             backgroundColor: currentTheme?.bg || '#ffffff',
-                            paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 20}px` : '1rem'
+                            paddingBottom: '1rem'
                         }}
                     >
                     {isSearching && (

@@ -81,23 +81,6 @@ interface GlobalSearchProps {
 const GlobalSearch: React.FC<GlobalSearchProps> = ({ onBack, onNavigate }) => {
     const { setCurrentPage } = useTheme();
     const [readerTheme, setReaderTheme] = useState(getReaderTheme());
-    const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-    useEffect(() => {
-        if (Capacitor.isNativePlatform()) {
-            Keyboard.setScroll({ isDisabled: true });
-            const showListener = Keyboard.addListener('keyboardWillShow', info => {
-                setKeyboardHeight(info.keyboardHeight);
-            });
-            const hideListener = Keyboard.addListener('keyboardWillHide', () => {
-                setKeyboardHeight(0);
-            });
-            return () => {
-                showListener.then(l => l.remove());
-                hideListener.then(l => l.remove());
-            };
-        }
-    }, []);
     
     useEffect(() => {
         setCurrentPage('quran_search');
@@ -921,7 +904,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ onBack, onNavigate }) => {
                     dir="rtl" 
                     style={{ 
                         backgroundColor: theme.bgColor,
-                        paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 20}px` : '1rem'
+                        paddingBottom: '1rem'
                     }}
                 >
                     {renderResults()}
