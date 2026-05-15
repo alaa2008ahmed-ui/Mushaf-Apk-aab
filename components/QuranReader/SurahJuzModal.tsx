@@ -341,9 +341,9 @@ const SurahJuzModal: React.FC<SurahJuzModalProps> = ({ type, quranData, onSelect
                         onClick={onClose}
                         className="theme-btn-bg theme-btn-text px-8 py-2 rounded-full font-bold shadow-lg transform active:scale-95 transition border"
                         style={{ 
-                            color: currentTheme?.id === 'black' ? '#000000' : (currentTheme?.btnText || '#000000'),
-                            borderColor: currentTheme?.id === 'black' ? '#000000' : (currentTheme?.cardBorder || '#e5e7eb'),
-                            backgroundColor: currentTheme?.id === 'black' ? '#ffffff' : (currentTheme?.btnBg || '#ffffff')
+                            color: currentTheme?.id === 'black' ? (currentTheme?.btnText || '#000000') : (currentTheme?.btnText || '#000000'),
+                            borderColor: currentTheme?.id === 'black' ? (currentTheme?.cardBorder || '#000000') : (currentTheme?.cardBorder || '#e5e7eb'),
+                            backgroundColor: currentTheme?.id === 'black' ? (currentTheme?.btnBg || '#ffffff') : (currentTheme?.btnBg || '#ffffff')
                         }}
                     >
                         إغلاق

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import BottomBar from '../components/BottomBar';
 import { useTheme } from '../context/ThemeContext';
 import WhatsAppButton from '../components/WhatsAppButton';
@@ -147,6 +147,7 @@ function MainMenu({ onNavigate, onOpenThemes, onOpenSideMenu }) {
       };
   });
   const [isVerseMenuOpen, setIsVerseMenuOpen] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const PREDEFINED_COLORS = [
       '#ffffff', '#f3f4f6', '#9ca3af', '#4b5563', '#000000',
@@ -537,7 +538,10 @@ function MainMenu({ onNavigate, onOpenThemes, onOpenSideMenu }) {
     <div>
       <InteractiveBackground />
       <div className="h-screen w-full flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
+        <div 
+          ref={scrollContainerRef}
+          className="flex-1 overflow-y-auto pb-24 no-scrollbar"
+        >
           <div className="main-layout px-4 flex flex-col" style={{ fontFamily: theme.font }}>
               
               <div id="verse-section">
@@ -806,9 +810,7 @@ function MainMenu({ onNavigate, onOpenThemes, onOpenSideMenu }) {
                               {[
                                   { icon: 'fa-brands fa-whatsapp', label: 'واتساب', color: '#25D366', action: 'whatsapp' },
                                   { icon: 'fa-brands fa-facebook-f', label: 'فيسبوك', color: '#1877F2', action: 'facebook' },
-                                  { icon: 'fa-brands fa-telegram', label: 'تليجرام', color: '#0088cc', action: 'telegram' },
-                                  { icon: 'fa-regular fa-copy', label: 'نسخ', color: theme.palette[0], action: 'copy' },
-                                  { icon: 'fa-solid fa-share-nodes', label: 'مشاركة', color: theme.palette[0], action: 'share' }
+                                  { icon: 'fa-regular fa-copy', label: 'نسخ', color: theme.palette[0], action: 'copy' }
                               ].map((item, index) => (
                                   <button 
                                       key={index}
@@ -827,17 +829,6 @@ function MainMenu({ onNavigate, onOpenThemes, onOpenSideMenu }) {
                                                   break;
                                               case 'facebook':
                                                   window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`, '_blank');
-                                                  break;
-                                              case 'telegram':
-                                                  // Use direct app link for Telegram
-                                                  const telegramUrl = `tg://msg_url?url=${encodedUrl}&text=${encodedText}`;
-                                                  const telegramWebUrl = `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`;
-                                                  
-                                                  // Try to open deep link, fallback to web
-                                                  window.location.href = telegramUrl;
-                                                  setTimeout(() => {
-                                                      window.open(telegramWebUrl, '_blank');
-                                                  }, 100);
                                                   break;
                                               case 'copy':
                                                   setToastMessage('تم نسخ نص المشاركة');
@@ -1015,6 +1006,12 @@ function MainMenu({ onNavigate, onOpenThemes, onOpenSideMenu }) {
         tutorialId="home-tutorial" 
         steps={homeTutorialSteps} 
         onStepChange={setCurrentTutorialStep}
+        onComplete={() => {
+            if (scrollContainerRef.current) {
+                // Ensure we go to the very top immediately
+                scrollContainerRef.current.scrollTo(0, 0);
+            }
+        }}
       />
       {currentTutorialStep && (
         <style>{`
