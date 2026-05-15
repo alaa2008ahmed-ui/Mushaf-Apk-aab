@@ -789,8 +789,7 @@ function MainMenu({ onNavigate, onOpenThemes, onOpenSideMenu }) {
                                       e.stopPropagation();
                                       const shareData = {
                                           title: 'تطبيق القرآن الكريم',
-                                          text: 'لمشاهدة التطبيق على المتصفح او الايفون اضغط على الرابط',
-                                          url: 'https://mushaf-ahmed-and-laila.netlify.app/',
+                                          text: 'لمشاهدة التطبيق على المتصفح او الايفون اضغط على الرابط\nhttps://mushaf-ahmed-and-laila.netlify.app/',
                                       };
 
                                       if (Capacitor.isNativePlatform()) {
@@ -798,7 +797,7 @@ function MainMenu({ onNavigate, onOpenThemes, onOpenSideMenu }) {
                                               await CapacitorShare.share(shareData);
                                           } catch (err: any) {
                                               try {
-                                                  await navigator.clipboard.writeText(shareData.url);
+                                                  await navigator.clipboard.writeText(shareData.text);
                                                   setToastMessage('تم نسخ الرابط');
                                                   setTimeout(() => setToastMessage(''), 2000);
                                               } catch (copyErr) {}
@@ -809,7 +808,7 @@ function MainMenu({ onNavigate, onOpenThemes, onOpenSideMenu }) {
                                           } catch (err: any) {
                                               if (err.name !== 'AbortError') {
                                                   try {
-                                                      await navigator.clipboard.writeText(shareData.url);
+                                                      await navigator.clipboard.writeText(shareData.text);
                                                       setToastMessage('تم نسخ الرابط');
                                                       setTimeout(() => setToastMessage(''), 2000);
                                                   } catch (copyErr) {}
@@ -817,7 +816,7 @@ function MainMenu({ onNavigate, onOpenThemes, onOpenSideMenu }) {
                                           }
                                       } else {
                                           try {
-                                              await navigator.clipboard.writeText(shareData.url);
+                                              await navigator.clipboard.writeText(shareData.text);
                                               setToastMessage('تم نسخ الرابط');
                                               setTimeout(() => setToastMessage(''), 2000);
                                           } catch (copyErr) {}
