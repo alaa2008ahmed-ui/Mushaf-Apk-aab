@@ -307,6 +307,18 @@ export const ThemeProvider = ({ children }: { children?: ReactNode }) => {
             
         root.style.setProperty('--badge-finished-bg', isDark ? 'rgba(74, 222, 128, 0.15)' : 'rgba(34, 197, 94, 0.1)');
         root.style.setProperty('--badge-finished-text', isDark ? '#4ade80' : '#16a34a');
+
+        // Set compatibility variables for components that use qr- prefix
+        root.style.setProperty('--qr-accent', theme.palette[0]);
+        root.style.setProperty('--qr-accent-text', theme.accentText || '#ffffff');
+        root.style.setProperty('--qr-bg', theme.bgColor || '#0D1B2A');
+        root.style.setProperty('--qr-text', theme.textColor);
+        root.style.setProperty('--qr-card-bg', pageKey === 'quran' ? quranCardBg : defaultCardBg);
+        root.style.setProperty('--qr-card-text', theme.textColor);
+        root.style.setProperty('--qr-card-border', pageKey === 'quran' ? quranCardBorder : defaultCardBorder);
+        root.style.setProperty('--qr-modal-bg', theme.cardBg || (isDark ? '#1e293b' : '#ffffff'));
+        root.style.setProperty('--qr-modal-text', theme.textColor);
+        root.style.setProperty('--qr-modal-border', theme.palette[0]);
     }, [settings.customBg, theme, currentPage]);
 
     const isPageLocked = useMemo(() => {
