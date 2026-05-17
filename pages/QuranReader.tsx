@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, FC } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, FC } from 'react';
 import { flushSync } from 'react-dom';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { Capacitor } from '@capacitor/core';
@@ -2605,7 +2605,7 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
         }
     }, [showToast]);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         const root = document.documentElement;
         const t = currentTheme;
         
@@ -2635,11 +2635,23 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
         root.style.setProperty('--search-result-border', t.accent || (t as any).palette?.[0]);
         root.style.setProperty('--search-result-text', t.cardText);
         
-        const darkBgs = ['#000000', '#2c241b', '#101010', '#0f172a', '#2e1065', '#064e3b', '#1e293b', '#4c1d95', '#1e1b4b', '#451a03'];
-        const isDark = (settings.bgColor || t.bg) && darkBgs.includes((settings.bgColor || t.bg).toLowerCase());
+        const darkBgs = [
+            '#000000', '#2c241b', '#101010', '#0f172a', '#2e1065', '#064e3b', '#1e293b', '#4c1d95', 
+            '#1e1b4b', '#451a03', '#022c22', '#450a0a', '#1e3a8a', '#422006', '#78350f', '#4c1d95',
+            '#280a1e', '#041e3a', '#1c1917', '#0f172a', '#09090b', '#064e3b', '#134e4a', '#334155',
+            '#0a0a0a', '#111111'
+        ];
+        // Ensure isDark is true if either background is in the list OR the text color is explicitly white
+        const textColor = (settings.textColor || t.text || '').toLowerCase();
+        const bgColor = (settings.bgColor || t.bg || '').toLowerCase();
+        const isDark = darkBgs.includes(bgColor) || textColor === '#ffffff';
+        
         if (isDark) document.documentElement.classList.add('dark');
         else document.documentElement.classList.remove('dark');
-    }, [currentTheme, themeKey, settings.highlightTextColor, settings.textColor, settings.bgColor, settings.fontFamily]);
+        
+        // Signal that quran context variables have been set to avoid other contexts overwriting them
+        window.dispatchEvent(new CustomEvent('quran-vars-applied', { detail: { themeId: t.id } }));
+    }, [currentTheme, themeKey, settings.highlightTextColor, settings.textColor, settings.bgColor, settings.fontFamily, activeModals]);
 
     const isBookmarksModalOpen = activeModals.includes('bookmarks-modal');
     useEffect(() => {
