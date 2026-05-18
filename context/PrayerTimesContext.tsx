@@ -288,45 +288,33 @@ export const PrayerTimesProvider = ({ children }: { children: ReactNode }) => {
                 const fallbacks = [
                     {
                         url: 'https://ipapi.co/json/',
-                        parser: (data: any) => {
-                            const city = data.city || "موقعي";
-                            const countryInfo = getCountryInfo(data.country_code || data.country, data.country_name, city);
-                            return {
-                                lat: data.latitude,
-                                lng: data.longitude,
-                                cityGov: `${city}${data.region ? ` - ${data.region}` : ''}`,
-                                fullCountry: countryInfo.fullName || data.country_name,
-                                combinedCode: countryInfo.combinedCode || (data.country_calling_code ? `+${data.country_calling_code}` : '')
-                            };
-                        }
+                        parser: (data: any) => ({
+                            lat: data.latitude,
+                            lng: data.longitude,
+                            cityGov: `${data.city} - ${data.region}`,
+                            fullCountry: data.country_name,
+                            combinedCode: data.country_calling_code
+                        })
                     },
                     {
                         url: 'https://ipwho.is/',
-                        parser: (data: any) => {
-                            const city = data.city || "موقعي";
-                            const countryInfo = getCountryInfo(data.country_code || data.country, data.country, city);
-                            return {
-                                lat: data.latitude,
-                                lng: data.longitude,
-                                cityGov: `${city}${data.region ? ` - ${data.region}` : ''}`,
-                                fullCountry: countryInfo.fullName || data.country,
-                                combinedCode: countryInfo.combinedCode || (data.calling_code ? `+${data.calling_code}` : '')
-                            };
-                        }
+                        parser: (data: any) => ({
+                            lat: data.latitude,
+                            lng: data.longitude,
+                            cityGov: `${data.city} - ${data.region}`,
+                            fullCountry: data.country,
+                            combinedCode: data.calling_code ? `+${data.calling_code}` : ''
+                        })
                     },
                     {
                         url: 'https://freeipapi.com/api/json',
-                        parser: (data: any) => {
-                            const city = data.cityName || "موقعي";
-                            const countryInfo = getCountryInfo(data.countryCode, data.countryName, city);
-                            return {
-                                lat: data.latitude,
-                                lng: data.longitude,
-                                cityGov: `${city}${data.regionName ? ` - ${data.regionName}` : ''}`,
-                                fullCountry: countryInfo.fullName || data.countryName,
-                                combinedCode: countryInfo.combinedCode || data.countryCode
-                            };
-                        }
+                        parser: (data: any) => ({
+                            lat: data.latitude,
+                            lng: data.longitude,
+                            cityGov: `${data.cityName} - ${data.regionName}`,
+                            fullCountry: data.countryName,
+                            combinedCode: data.countryCode
+                        })
                     }
                 ];
 
@@ -345,16 +333,7 @@ export const PrayerTimesProvider = ({ children }: { children: ReactNode }) => {
                         console.warn(`IP location fetch failed for ${service.url}:`, e);
                     }
                 }
-                
-                // If everything fails, do not reject (causes unhandled promise rejection), settle gracefully
-                setConfig(prev => ({ 
-                    ...prev, 
-                    location: {
-                        lat: 21.4225, lng: 39.8262, // Mecca fallback
-                        cityGov: 'موقعي الحالي', fullCountry: '', combinedCode: ''
-                    } 
-                }));
-                resolve();
+                reject(new Error("Failed to fetch location by IP from all services"));
             };
 
             try {
@@ -374,80 +353,38 @@ export const PrayerTimesProvider = ({ children }: { children: ReactNode }) => {
                     lat: latitude, lng: longitude,
                     cityGov: 'موقعي الحالي', fullCountry: '', combinedCode: ''
                 };
-                
                 try {
-                    // Try BigDataCloud first (more reliable, no strict User-Agent requirements, direct endpoint to avoid 307 CORS)
-                    const res2 = await fetchWithTimeout(`https://api-bdc.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=ar`, {}, 7000);
-                    const data2 = await res2.json();
-                    if (data2 && data2.countryName) {
-                        const city = data2.city || data2.locality || data2.principalSubdivision || "موقعي";
-                        const state = data2.principalSubdivision && data2.principalSubdivision !== city ? ` - ${data2.principalSubdivision}` : '';
-                        const countryInfo = getCountryInfo(data2.countryCode, data2.countryName, city);
+                    const res = await fetchWithTimeout(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=ar`, {}, 7000);
+                    const data = await res.json();
+                    if (data && data.address) {
+                        const addr = data.address;
+                        const city = addr.village || addr.town || addr.city || "موقعي";
+                        const countryInfo = getCountryInfo(addr.country_code, addr.country, city);
                         newLoc = {
                             ...newLoc,
-                            cityGov: `${city}${state}`,
+                            cityGov: `${city}${addr.state ? ` - ${addr.state}` : ''}`,
                             fullCountry: countryInfo.fullName,
                             combinedCode: countryInfo.combinedCode
                         };
                     } else {
-                        throw new Error("No data");
+                        throw new Error("No address");
                     }
                 } catch(e) {
                     try {
-                        const res = await fetchWithTimeout(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=ar`, {
-                            headers: { 'User-Agent': 'AthanApp/1.0' }
-                        }, 7000);
-                        const data = await res.json();
-                        if (data && data.address) {
-                            const addr = data.address;
-                            const city = addr.village || addr.town || addr.city || "موقعي";
-                            const countryInfo = getCountryInfo(addr.country_code, addr.country, city);
+                        const res2 = await fetchWithTimeout(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=ar`, {}, 7000);
+                        const data2 = await res2.json();
+                        if (data2 && data2.countryName) {
                             newLoc = {
                                 ...newLoc,
-                                cityGov: `${city}${addr.state ? ` - ${addr.state}` : ''}`,
-                                fullCountry: countryInfo.fullName,
-                                combinedCode: countryInfo.combinedCode
+                                cityGov: data2.city || data2.locality || "موقعي الحالي",
+                                fullCountry: data2.countryName,
+                                combinedCode: ""
                             };
                         } else {
-                            throw new Error("No address");
+                            throw new Error("No data");
                         }
                     } catch (err) {
-                        try {
-                            const resIP = await fetchWithTimeout('https://ipwho.is/', { cache: 'no-cache' }, 5000);
-                            if (resIP.ok) {
-                                const dataIP = await resIP.json();
-                                const city = dataIP.city || "موقعي";
-                                const countryInfo = getCountryInfo(dataIP.country_code, dataIP.country, city);
-                                newLoc = {
-                                    ...newLoc,
-                                    cityGov: `${city}${dataIP.region ? ` - ${dataIP.region}` : ''}`,
-                                    fullCountry: countryInfo.fullName,
-                                    combinedCode: countryInfo.combinedCode
-                                };
-                            } else {
-                                throw new Error("ipwho failed");
-                            }
-                        } catch (eIP) {
-                            try {
-                                const resIP2 = await fetchWithTimeout('https://freeipapi.com/api/json', { cache: 'no-cache' }, 5000);
-                                if (resIP2.ok) {
-                                  const dataIP2 = await resIP2.json();
-                                  const city = dataIP2.cityName || "موقعي";
-                                  const countryInfo = getCountryInfo(dataIP2.countryCode, dataIP2.countryName, city);
-                                  newLoc = {
-                                      ...newLoc,
-                                      cityGov: `${city}${dataIP2.regionName ? ` - ${dataIP2.regionName}` : ''}`,
-                                      fullCountry: countryInfo.fullName,
-                                      combinedCode: countryInfo.combinedCode
-                                  };
-                                } else {
-                                    throw new Error("freeipapi failed");
-                                }
-                            } catch (eIP2) {
-                                // Default fallback if all fail
-                                newLoc.cityGov = "موقعي الحالي";
-                            }
-                        }
+                        newLoc.cityGov = "موقعي الحالي";
                     }
                 }
                 setConfig(prev => ({ ...prev, location: newLoc }));
