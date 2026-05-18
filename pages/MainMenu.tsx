@@ -539,6 +539,22 @@ function MainMenu({ onNavigate, onOpenThemes, onOpenSideMenu }) {
 
   useEffect(() => {
       const interceptor = () => {
+          if (showExpandedEventsModal) {
+              setShowExpandedEventsModal(false);
+              return true;
+          }
+          if (showExpandedUpcomingEventModal) {
+              setShowExpandedUpcomingEventModal(false);
+              return true;
+          }
+          if (isVerseMenuOpen) {
+              setIsVerseMenuOpen(false);
+              return true;
+          }
+          if (isPasscodeOpen) {
+              setIsPasscodeOpen(false);
+              return true;
+          }
           if (isCustomizationOpen) {
               setIsCustomizationOpen(false);
               return true;
@@ -551,7 +567,7 @@ function MainMenu({ onNavigate, onOpenThemes, onOpenSideMenu }) {
       };
       const unregister = registerBackInterceptor(interceptor);
       return unregister;
-  }, [isCustomizationOpen, isEditMode]);
+  }, [isCustomizationOpen, isEditMode, showExpandedEventsModal, showExpandedUpcomingEventModal, isPasscodeOpen, isVerseMenuOpen]);
 
   const handleSaveCustomization = (selectedIds: string[]) => {
       setVisibleItems(selectedIds);
@@ -1034,38 +1050,38 @@ function MainMenu({ onNavigate, onOpenThemes, onOpenSideMenu }) {
                 <div className="flex flex-col items-center gap-4 mb-6">
                     <div className="text-center font-bold text-2xl font-kufi flex items-center gap-2" style={{ color: theme.palette[0] }}>
                         <i className="fa-solid fa-moon"></i>
-                        {upcomingEvents.length > 1 ? 'المناسبات الإسلامية القادمة' : 'المناسبة الإسلامية القادمة'}
+                        المناسبة الإسلامية
                     </div>
                 </div>
                 
                 <div className="flex flex-col gap-6 w-full">
-                    {upcomingEvents.map((event, index) => (
-                        <div key={index} className="flex flex-col items-center justify-center gap-6 p-8 rounded-3xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 w-full text-center">
+                    {upcomingEvents[eventIndex] && (
+                        <div className="flex flex-col items-center justify-center gap-6 p-8 rounded-3xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 w-full text-center">
                             <p className="text-[32px] sm:text-[38px] leading-[1.6] font-kufi font-bold w-full" style={{ color: theme.textColor }}>
-                                {event.name}
+                                {upcomingEvents[eventIndex].name}
                             </p>
                             <hr className="w-1/2 opacity-20 border-current" style={{ color: theme.textColor }} />
                             <div className="flex flex-col gap-2">
                                 <p className="text-xl font-bold opacity-80" style={{ color: theme.textColor }}>
-                                    {event.dateStr}
+                                    {upcomingEvents[eventIndex].dateStr}
                                 </p>
                                 <p className="text-xl font-bold opacity-80" style={{ color: theme.textColor }}>
-                                    {event.gregorianDateStr}
+                                    {upcomingEvents[eventIndex].gregorianDateStr}
                                 </p>
                             </div>
                             <div className="w-full p-4 rounded-xl mt-2 flex flex-col items-center" style={{ backgroundColor: theme.palette[0] + '20', color: theme.palette[0] }}>
                                <span className="text-lg font-bold mb-1 opacity-80">
-                                   {event.isToday ? 'توافق' : (event.daysRemaining > 0 ? 'يتبقى عليها' : 'مر عليها')}
+                                   {upcomingEvents[eventIndex].isToday ? 'توافق' : (upcomingEvents[eventIndex].daysRemaining > 0 ? 'يتبقى عليها' : 'مر عليها')}
                                </span>
                                <span className="text-5xl font-black font-kufi my-2">
-                                   {event.isToday ? 'اليوم' : toArabic(Math.abs(event.daysRemaining))}
+                                   {upcomingEvents[eventIndex].isToday ? 'اليوم' : toArabic(Math.abs(upcomingEvents[eventIndex].daysRemaining))}
                                </span>
-                               {!event.isToday && (
+                               {!upcomingEvents[eventIndex].isToday && (
                                    <span className="text-lg font-bold opacity-80">يوم</span>
                                )}
                             </div>
                         </div>
-                    ))}
+                    )}
 
                     <button 
                         onClick={() => setShowExpandedUpcomingEventModal(false)}
