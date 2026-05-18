@@ -333,7 +333,16 @@ export const PrayerTimesProvider = ({ children }: { children: ReactNode }) => {
                         console.warn(`IP location fetch failed for ${service.url}:`, e);
                     }
                 }
-                reject(new Error("Failed to fetch location by IP from all services"));
+                
+                // If everything fails, do not reject (causes unhandled promise rejection), settle gracefully
+                setConfig(prev => ({ 
+                    ...prev, 
+                    location: {
+                        lat: 21.4225, lng: 39.8262, // Mecca fallback
+                        cityGov: 'موقعي الحالي', fullCountry: '', combinedCode: ''
+                    } 
+                }));
+                resolve();
             };
 
             try {
@@ -374,17 +383,54 @@ export const PrayerTimesProvider = ({ children }: { children: ReactNode }) => {
                         const res2 = await fetchWithTimeout(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=ar`, {}, 7000);
                         const data2 = await res2.json();
                         if (data2 && data2.countryName) {
+                            const city = data2.city || data2.locality || data2.principalSubdivision || "موقعي";
+                            const state = data2.principalSubdivision && data2.principalSubdivision !== city ? ` - ${data2.principalSubdivision}` : '';
+                            const countryInfo = getCountryInfo(data2.countryCode, data2.countryName, city);
                             newLoc = {
                                 ...newLoc,
-                                cityGov: data2.city || data2.locality || "موقعي الحالي",
-                                fullCountry: data2.countryName,
-                                combinedCode: ""
+                                cityGov: `${city}${state}`,
+                                fullCountry: countryInfo.fullName,
+                                combinedCode: countryInfo.combinedCode
                             };
                         } else {
                             throw new Error("No data");
                         }
                     } catch (err) {
-                        newLoc.cityGov = "موقعي الحالي";
+                        try {
+                            const resIP = await fetchWithTimeout('https://ipwho.is/', { cache: 'no-cache' }, 5000);
+                            if (resIP.ok) {
+                                const dataIP = await resIP.json();
+                                const city = dataIP.city || "موقعي";
+                                const countryInfo = getCountryInfo(dataIP.country_code, dataIP.country, city);
+                                newLoc = {
+                                    ...newLoc,
+                                    cityGov: `${city}${dataIP.region ? ` - ${dataIP.region}` : ''}`,
+                                    fullCountry: countryInfo.fullName,
+                                    combinedCode: countryInfo.combinedCode
+                                };
+                            } else {
+                                throw new Error("ipwho failed");
+                            }
+                        } catch (eIP) {
+                            try {
+                                const resIP2 = await fetchWithTimeout('https://freeipapi.com/api/json', { cache: 'no-cache' }, 5000);
+                                if (resIP2.ok) {
+                                  const dataIP2 = await resIP2.json();
+                                  const city = dataIP2.cityName || "موقعي";
+                                  const countryInfo = getCountryInfo(dataIP2.countryCode, dataIP2.countryName, city);
+                                  newLoc = {
+                                      ...newLoc,
+                                      cityGov: `${city}${dataIP2.regionName ? ` - ${dataIP2.regionName}` : ''}`,
+                                      fullCountry: countryInfo.fullName,
+                                      combinedCode: countryInfo.combinedCode
+                                  };
+                                } else {
+                                    throw new Error("freeipapi failed");
+                                }
+                            } catch (eIP2) {
+                                newLoc.cityGov = "موقعي الحالي";
+                            }
+                        }
                     }
                 }
                 setConfig(prev => ({ ...prev, location: newLoc }));
