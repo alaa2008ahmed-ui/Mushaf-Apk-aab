@@ -1,6 +1,7 @@
 import React, { FC } from 'react';
 
-const MarkerNotification: FC<{isVisible: boolean, type: string, text: string}> = ({isVisible, type, text}) => {
+const MarkerNotification: FC<{isVisible: boolean, type: string, text: string, currentTheme?: any}> = ({isVisible, type, text, currentTheme}) => {
+    if (!isVisible) return null;
     const getIcon = () => {
         switch(type) {
             case 'juz': return 'fa-book-open';
@@ -12,7 +13,10 @@ const MarkerNotification: FC<{isVisible: boolean, type: string, text: string}> =
     };
 
     return (
-        <div className={`marker-notification ${isVisible ? 'show' : ''}`} style={{ backgroundColor: 'var(--qr-modal-bg)', color: 'var(--qr-modal-text)', border: '1px solid var(--qr-card-border)' }}>
+        <div 
+            className={`marker-notification modal-skinned toast-element ${isVisible ? 'show' : ''}`}
+            style={{ fontFamily: currentTheme?.font }}
+        >
             <div className="marker-icon theme-header-bg"><i className={`fa-solid ${getIcon()}`}></i></div>
             <div className="marker-text">{text}</div>
         </div>

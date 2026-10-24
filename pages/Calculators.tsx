@@ -1,422 +1,237 @@
-import React, { useState, useMemo } from 'react';
-import { calculateMawarith, HeirResult, MawarithInput } from '@/utils/mawarithCalculator';
-import BottomBar from '../components/BottomBar';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
+import ThemePageLock from '../components/ThemePageLock';
+import ZakatCalculator from '../components/Calculators/ZakatCalculator';
+import MawarithCalculator from '../components/Calculators/MawarithCalculator';
+import KaffaratCalculator from '../components/Calculators/KaffaratCalculator';
+import FitrAndUdhiyahCalculator from '../components/Calculators/FitrAndUdhiyahCalculator';
+import { useLanguage } from '../context/LanguageContext';
+import { HelpCircle } from 'lucide-react';
+import { CommunitySpotlightGuide, getGuideSeen } from '../components/Community/CommunitySpotlightGuide';
+import { 
+    CALCULATOR_ZAKAT_STEPS, 
+    CALCULATOR_MAWARITH_STEPS, 
+    CALCULATOR_KAFFARAT_STEPS, 
+    CALCULATOR_FITR_STEPS,
+    CALCULATOR_UDHIYAH_STEPS
+} from '../components/Community/communityTourSteps';
+import { markPageAsSeen } from '../utils/badgeManager';
 
 interface CalculatorsProps {
     onBack: () => void;
+    onNavigate: (id: string, params?: any) => void; 
 }
 
-const Calculators: React.FC<CalculatorsProps> = ({ onBack }) => {
-    const { theme } = useTheme();
-    const [activeTab, setActiveTab] = useState<'zakat' | 'mawarith' | 'kaffarat'>('zakat');
+const Calculators: React.FC<CalculatorsProps> = ({ onBack, onNavigate }) => {
+    const { theme, themeKey } = useTheme();
+    const { t, language } = useLanguage();
+    const isEn = language === 'en';
+    const isBlackTheme = theme.bgColor === '#000000' || theme.name === 'أبيض وأسود';
+    const isDefaultTheme = themeKey === 'default' || !themeKey;
+    const cardBorderColor = isDefaultTheme 
+        ? '#000000' 
+        : (isBlackTheme 
+            ? '#FFFFFF' 
+            : (theme.palette?.[0] || '#000000'));
+    const [activeTab, setActiveTab] = useState<'zakat' | 'mawarith' | 'kaffarat' | 'fitr-udhiyah'>('zakat');
+    const [fitrUdhiyahSubTab, setFitrUdhiyahSubTab] = useState<'fitr' | 'udhiyah'>('fitr');
+    const [showGuide, setShowGuide] = useState(false);
 
-    // --- Zakat State ---
-    const [gold24Weight, setGold24Weight] = useState('');
-    const [gold24Price, setGold24Price] = useState('');
-    const [gold21Weight, setGold21Weight] = useState('');
-    const [gold21Price, setGold21Price] = useState('');
-    const [gold18Weight, setGold18Weight] = useState('');
-    const [gold18Price, setGold18Price] = useState('');
-    const [silverWeight, setSilverWeight] = useState('');
-    const [silverPrice, setSilverPrice] = useState('');
-    const [cashAmount, setCashAmount] = useState('');
-
-    // --- Mawarith State ---
-    const [estateValue, setEstateValue] = useState('');
-    const [spouseType, setSpouseType] = useState<'none' | 'husband' | 'wife'>('none');
-    const [wivesCount, setWivesCount] = useState(1);
-    const [hasFather, setHasFather] = useState(false);
-    const [hasMother, setHasMother] = useState(false);
-    const [sonsCount, setSonsCount] = useState(0);
-    const [daughtersCount, setDaughtersCount] = useState(0);
-    const [grandsonsCount, setGrandsonsCount] = useState(0);
-    const [granddaughtersCount, setGranddaughtersCount] = useState(0);
-    const [hasPaternalGrandfather, setHasPaternalGrandfather] = useState(false);
-    const [hasMaternalGrandmother, setHasMaternalGrandmother] = useState(false);
-    const [hasPaternalGrandmother, setHasPaternalGrandmother] = useState(false);
-    const [fullBrothersCount, setFullBrothersCount] = useState(0);
-    const [fullSistersCount, setFullSistersCount] = useState(0);
-    const [paternalBrothersCount, setPaternalBrothersCount] = useState(0);
-    const [paternalSistersCount, setPaternalSistersCount] = useState(0);
-    const [maternalSiblingsCount, setMaternalSiblingsCount] = useState(0);
-    const [fullNephewsCount, setFullNephewsCount] = useState(0);
-    const [paternalNephewsCount, setPaternalNephewsCount] = useState(0);
-    const [fullUnclesCount, setFullUnclesCount] = useState(0);
-    const [paternalUnclesCount, setPaternalUnclesCount] = useState(0);
-    const [fullCousinsCount, setFullCousinsCount] = useState(0);
-    const [paternalCousinsCount, setPaternalCousinsCount] = useState(0);
-
-    // --- Kaffarat State ---
-    const [missedFastingDays, setMissedFastingDays] = useState('');
-    const [feedingCost, setFeedingCost] = useState('');
-    const [oathCount, setOathCount] = useState('');
-
-    const inputStyle = {
-        backgroundColor: theme.isOriginal ? '#fff' : 'rgba(255,255,255,0.05)',
-        borderColor: theme.isOriginal ? '#e5e7eb' : 'rgba(255,255,255,0.2)',
-        color: theme.textColor,
-        fontFamily: 'Cairo, sans-serif'
-    };
-
-    // --- Zakat Calculation ---
-    const calculateZakat = () => {
-        const w24 = parseFloat(gold24Weight) || 0;
-        const p24 = parseFloat(gold24Price) || 0;
-        const w21 = parseFloat(gold21Weight) || 0;
-        const p21 = parseFloat(gold21Price) || 0;
-        const w18 = parseFloat(gold18Weight) || 0;
-        const p18 = parseFloat(gold18Price) || 0;
-        const sWeight = parseFloat(silverWeight) || 0;
-        const sPrice = parseFloat(silverPrice) || 0;
-        const cash = parseFloat(cashAmount) || 0;
-
-        const hasInput = gold24Weight || gold21Weight || gold18Weight || silverWeight || cashAmount;
-        
-        const goldValue = (w24 * p24) + (w21 * p21) + (w18 * p18);
-        const silverValue = sWeight * sPrice;
-        const totalWealth = goldValue + silverValue + cash;
-        
-        // Nisab is 85g of 24k gold.
-        let price24k = p24;
-        if (price24k === 0 && p21 > 0) price24k = p21 * (24 / 21);
-        if (price24k === 0 && p18 > 0) price24k = p18 * (24 / 18);
-        
-        const goldNisabValue = price24k > 0 ? 85 * price24k : 0;
-        
-        let zakatAmount = 0;
-        if (goldNisabValue > 0 && totalWealth >= goldNisabValue) {
-            zakatAmount = totalWealth * 0.025;
-        } else if (goldNisabValue === 0 && totalWealth > 0) {
-            zakatAmount = totalWealth * 0.025;
+    // Initial check for Zakat guide on first entry
+    useEffect(() => {
+        markPageAsSeen('calculators');
+        if (!getGuideSeen('calc_tab_zakat_spotlight')) {
+            const timer = setTimeout(() => {
+                setShowGuide(true);
+            }, 300);
+            return () => clearTimeout(timer);
         }
-        
-        if (zakatAmount <= 0) {
-            return hasInput ? 'لا يوجد زكاة' : '0.00';
+    }, []);
+
+    const getGuideKeyForTab = (tabId: 'zakat' | 'mawarith' | 'kaffarat' | 'fitr-udhiyah', subTab: 'fitr' | 'udhiyah') => {
+        if (tabId === 'fitr-udhiyah') {
+            return subTab === 'udhiyah' ? 'calc_subtab_udhiyah_spotlight' : 'calc_subtab_fitr_spotlight';
         }
-        return zakatAmount.toFixed(2);
+        return `calc_tab_${tabId}_spotlight`;
     };
 
-    // --- Mawarith UI Logic (Hajb) ---
-    const hasSons = sonsCount > 0;
-    const hasDaughters = daughtersCount > 0;
-    const hasGrandsons = grandsonsCount > 0 && !hasSons;
-    const hasGranddaughters = granddaughtersCount > 0 && !hasSons;
-    
-    const isMaleDescendant = hasSons || hasGrandsons;
-    const isFemaleDescendant = hasDaughters || hasGranddaughters;
-    const isChildrenPresent = isMaleDescendant || isFemaleDescendant;
-
-    const isMaleAscendant = hasFather || (hasPaternalGrandfather && !hasFather);
-
-    const showPaternalGrandfather = !hasFather;
-    const showMaternalGrandmother = !hasMother;
-    const showPaternalGrandmother = !hasMother && !hasFather;
-    const showGrandsons = !hasSons;
-    const showGranddaughters = !hasSons;
-
-    const blockMaternalSiblings = isChildrenPresent || isMaleAscendant;
-    const blockFullSiblings = isMaleDescendant || hasFather || hasPaternalGrandfather;
-    const blockPaternalSiblings = blockFullSiblings || fullBrothersCount > 0 || (fullSistersCount > 0 && isFemaleDescendant);
-
-    const showMaternalSiblings = !blockMaternalSiblings;
-    const showFullSiblings = !blockFullSiblings;
-    const showPaternalSiblings = !blockPaternalSiblings;
-
-    const blockNephews = blockPaternalSiblings || fullBrothersCount > 0 || paternalBrothersCount > 0;
-    const showFullNephews = !blockNephews;
-    const showPaternalNephews = !blockNephews && fullNephewsCount === 0;
-
-    const blockUncles = blockNephews || fullNephewsCount > 0 || paternalNephewsCount > 0;
-    const showFullUncles = !blockUncles;
-    const showPaternalUncles = !blockUncles && fullUnclesCount === 0;
-
-    const blockCousins = blockUncles || fullUnclesCount > 0 || paternalUnclesCount > 0;
-    const showFullCousins = !blockCousins;
-    const showPaternalCousins = !blockCousins && fullCousinsCount === 0;
-
-    const mawarithInput: MawarithInput = {
-        estateValue, spouseType, wivesCount, hasFather, hasMother, sonsCount, daughtersCount,
-        grandsonsCount: showGrandsons ? grandsonsCount : 0,
-        granddaughtersCount: showGranddaughters ? granddaughtersCount : 0,
-        hasPaternalGrandfather: showPaternalGrandfather ? hasPaternalGrandfather : false,
-        hasMaternalGrandmother: showMaternalGrandmother ? hasMaternalGrandmother : false,
-        hasPaternalGrandmother: showPaternalGrandmother ? hasPaternalGrandmother : false,
-        fullBrothersCount: showFullSiblings ? fullBrothersCount : 0,
-        fullSistersCount: showFullSiblings ? fullSistersCount : 0,
-        paternalBrothersCount: showPaternalSiblings ? paternalBrothersCount : 0,
-        paternalSistersCount: showPaternalSiblings ? paternalSistersCount : 0,
-        maternalSiblingsCount: showMaternalSiblings ? maternalSiblingsCount : 0,
-        fullNephewsCount: showFullNephews ? fullNephewsCount : 0,
-        paternalNephewsCount: showPaternalNephews ? paternalNephewsCount : 0,
-        fullUnclesCount: showFullUncles ? fullUnclesCount : 0,
-        paternalUnclesCount: showPaternalUncles ? paternalUnclesCount : 0,
-        fullCousinsCount: showFullCousins ? fullCousinsCount : 0,
-        paternalCousinsCount: showPaternalCousins ? paternalCousinsCount : 0,
+    const handleTabChange = (tabId: 'zakat' | 'mawarith' | 'kaffarat' | 'fitr-udhiyah') => {
+        if (activeTab === tabId) return;
+        setShowGuide(false);
+        setActiveTab(tabId);
+        
+        const guideKey = getGuideKeyForTab(tabId, fitrUdhiyahSubTab);
+        if (!getGuideSeen(guideKey)) {
+            setTimeout(() => {
+                setShowGuide(true);
+            }, 250);
+        }
     };
 
-    const mawarithResults: HeirResult[] = useMemo(() => calculateMawarith(mawarithInput), [mawarithInput]);
+    const handleFitrUdhiyahSubTabChange = (sub: 'fitr' | 'udhiyah') => {
+        if (fitrUdhiyahSubTab === sub) return;
+        setShowGuide(false);
+        setFitrUdhiyahSubTab(sub);
+        
+        const guideKey = sub === 'udhiyah' ? 'calc_subtab_udhiyah_spotlight' : 'calc_subtab_fitr_spotlight';
+        if (!getGuideSeen(guideKey)) {
+            setTimeout(() => {
+                setShowGuide(true);
+            }, 250);
+        }
+    };
 
-    const renderNumberInput = (label: string, value: number, setter: (val: number) => void) => (
-        <div className="flex flex-col">
-            <label className="text-xs font-bold mb-1 opacity-80" style={{ color: theme.textColor }}>{label}</label>
-            <input type="text" inputMode="numeric" pattern="[0-9]*" min="0" value={value || ''} placeholder="0" onChange={e => setter(parseInt(e.target.value) || 0)} className="w-full p-2 rounded-lg border focus:ring-2 focus:outline-none text-center" style={inputStyle} />
-        </div>
-    );
+    const getActiveGuideConfig = () => {
+        switch (activeTab) {
+            case 'zakat':
+                return {
+                    key: 'calc_tab_zakat_spotlight',
+                    steps: CALCULATOR_ZAKAT_STEPS,
+                };
+            case 'mawarith':
+                return {
+                    key: 'calc_tab_mawarith_spotlight',
+                    steps: CALCULATOR_MAWARITH_STEPS,
+                };
+            case 'kaffarat':
+                return {
+                    key: 'calc_tab_kaffarat_spotlight',
+                    steps: CALCULATOR_KAFFARAT_STEPS,
+                };
+            case 'fitr-udhiyah':
+                if (fitrUdhiyahSubTab === 'udhiyah') {
+                    return {
+                        key: 'calc_subtab_udhiyah_spotlight',
+                        steps: CALCULATOR_UDHIYAH_STEPS,
+                    };
+                }
+                return {
+                    key: 'calc_subtab_fitr_spotlight',
+                    steps: CALCULATOR_FITR_STEPS,
+                };
+        }
+    };
 
-    const renderCheckbox = (label: string, checked: boolean, setter: (val: boolean) => void) => (
-        <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg border" style={{ ...inputStyle, borderColor: checked ? 'var(--color-primary)' : inputStyle.borderColor, backgroundColor: checked ? 'rgba(16, 185, 129, 0.1)' : inputStyle.backgroundColor }}>
-            <input type="checkbox" checked={checked} onChange={e => setter(e.target.checked)} className="w-4 h-4 accent-primary" />
-            <span className="text-sm font-bold" style={{ color: theme.textColor }}>{label}</span>
-        </label>
-    );
+    const activeGuide = getActiveGuideConfig();
 
     return (
-        <div className="h-screen flex flex-col bg-transparent">
+        <div 
+            className="h-screen flex flex-col bg-transparent"
+            dir={isEn ? 'ltr' : 'rtl'}
+            style={{ fontFamily: theme.font }}
+        >
             {/* Header */}
-            <header className="app-top-bar">
+            <header className="app-top-bar shadow-sm z-10 shrink-0">
                 <div className="app-top-bar__inner">
-                    <h1 className="app-top-bar__title text-2xl font-kufi text-center">الحاسبة الشرعية</h1>
-                    <p className="app-top-bar__subtitle text-center">زكاة، ميراث، كفارات</p>
+                    <div className="relative flex items-center justify-center w-full min-h-[44px]">
+                        {/* زر الرجوع للخلف */}
+                        <div className={`absolute ${isEn ? 'left-0' : 'right-0'} flex items-center`}>
+                            <button
+                                onClick={onBack}
+                                className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-black/10 dark:hover:bg-white/10 active:scale-90 cursor-pointer"
+                                title={isEn ? "Back" : "رجوع للخلف"}
+                                aria-label={isEn ? "Back" : "رجوع للخلف"}
+                            >
+                                <i className={`fa-solid ${isEn ? 'fa-arrow-left' : 'fa-arrow-right'} text-xl`}></i>
+                            </button>
+                        </div>
+
+                        {/* عنوان الصفحة في الوسط */}
+                        <div className="text-center px-12 min-w-0">
+                            <h1 className="app-top-bar__title text-lg sm:text-xl font-kufi truncate">
+                                {isEn ? 'Islamic Legal Calculators' : t('page.calculators_title', 'الحاسبة الشرعية')}
+                            </h1>
+                        </div>
+
+                        {/* أيقونة الدليل والمنزل على يسار/يمين النص للعودة إلى الصفحة الرئيسية */}
+                        <div className={`absolute ${isEn ? 'right-0' : 'left-0'} flex items-center gap-1`}>
+                            <button
+                                id="btn-calc-help"
+                                type="button"
+                                onClick={() => setShowGuide(true)}
+                                className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-black/10 dark:hover:bg-white/10 active:scale-90 cursor-pointer"
+                                style={{ color: 'var(--top-bar-text, inherit)' }}
+                                title={isEn ? "Calculator Guide" : "دليل وشرح الحاسبة الشرعية"}
+                                aria-label={isEn ? "Calculator Guide" : "دليل وشرح الحاسبة الشرعية"}
+                            >
+                                <HelpCircle size={19} />
+                            </button>
+                            <ThemePageLock />
+                            <button
+                                onClick={() => onNavigate('home')}
+                                className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-black/10 dark:hover:bg-white/10 active:scale-90 cursor-pointer"
+                                title={isEn ? "Home Page" : "الصفحة الرئيسية"}
+                                aria-label={isEn ? "Home Page" : "الصفحة الرئيسية"}
+                            >
+                                <i className="fa-solid fa-house text-xl"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </header>
 
             {/* Tabs */}
-            <div className="flex px-4 pt-4 gap-2 font-cairo">
-                <button 
-                    onClick={() => setActiveTab('zakat')}
-                    className={`flex-1 py-2 rounded-t-xl font-bold transition-colors ${activeTab === 'zakat' ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-                >
-                    الزكاة
-                </button>
-                <button 
-                    onClick={() => setActiveTab('mawarith')}
-                    className={`flex-1 py-2 rounded-t-xl font-bold transition-colors ${activeTab === 'mawarith' ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-                >
-                    الميراث
-                </button>
-                <button 
-                    onClick={() => setActiveTab('kaffarat')}
-                    className={`flex-1 py-2 rounded-t-xl font-bold transition-colors ${activeTab === 'kaffarat' ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-                >
-                    الكفارات
-                </button>
+            <div id="calc-tabs-bar" className="flex px-1.5 sm:px-4 pt-2.5 sm:pt-3 gap-1 sm:gap-2 font-cairo z-10 shrink-0">
+                {[
+                    { id: 'zakat', label: isEn ? 'Zakat' : 'الزكاة' },
+                    { id: 'mawarith', label: isEn ? 'Inheritance' : 'المواريث' },
+                    { id: 'kaffarat', label: isEn ? 'Expiations' : 'الكفارات' },
+                    { id: 'fitr-udhiyah', label: isEn ? 'Fitr & Udhiyah' : 'فطر وأضحية' }
+                ].map(tab => (
+                    <button 
+                        key={tab.id}
+                        onClick={() => handleTabChange(tab.id as any)}
+                        className={`flex-1 py-1.5 sm:py-2 px-1 sm:px-2 rounded-t-xl font-bold transition-all duration-300 flex items-center justify-center cursor-pointer text-center
+                            ${activeTab === tab.id 
+                                ? (isDefaultTheme 
+                                    ? 'bg-black text-white scale-105 origin-bottom shadow-md' 
+                                    : (isBlackTheme ? 'bg-white text-black scale-105 origin-bottom shadow-md' : 'bg-primary text-white shadow-[0_-4px_10px_rgba(16,185,129,0.2)] scale-105 origin-bottom')
+                                  ) 
+                                : (isDefaultTheme 
+                                    ? 'bg-white text-black shadow-sm opacity-80 hover:opacity-100' 
+                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                  )}`}
+                        style={{
+                            borderColor: cardBorderColor,
+                            borderWidth: '1.5px',
+                            borderStyle: 'solid',
+                        }}
+                    >
+                        <span className={`${isEn ? 'text-[11px] sm:text-xs md:text-sm tracking-tight' : 'text-xs sm:text-sm'} whitespace-nowrap`}>
+                            {tab.label}
+                        </span>
+                    </button>
+                ))}
             </div>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto p-4 pb-24 hide-scrollbar font-cairo">
-                
-                {/* Zakat Tab */}
-                {activeTab === 'zakat' && (
-                    <div className="themed-card p-5 rounded-xl space-y-4 animate-fade-in">
-                        <h2 className="text-xl font-bold mb-4 flex items-center gap-2" style={{ color: theme.textColor }}>
-                            <i className="fa-solid fa-coins text-primary"></i> حاسبة الزكاة
-                        </h2>
-                        
-                        <div className="space-y-3">
-                            <div>
-                                <label className="block text-sm font-bold mb-1 opacity-80" style={{ color: theme.textColor }}>النقود والمدخرات</label>
-                                <input type="number" placeholder="المبلغ" value={cashAmount} onChange={e => setCashAmount(e.target.value)} className="w-full p-3 rounded-lg border focus:ring-2 focus:outline-none" style={inputStyle} />
-                            </div>
-                            
-                            <div className="space-y-2">
-                                <label className="block text-sm font-bold mb-1 opacity-80" style={{ color: theme.textColor }}>الذهب</label>
-                                <div className="grid grid-cols-[auto_1fr_1fr] gap-3 items-center">
-                                    <span className="text-sm font-bold w-12" style={{ color: theme.textColor }}>عيار 24</span>
-                                    <input type="number" placeholder="الوزن (جرام)" value={gold24Weight} onChange={e => setGold24Weight(e.target.value)} className="w-full p-2 rounded-lg border focus:ring-2 focus:outline-none" style={inputStyle} />
-                                    <input type="number" placeholder="سعر الجرام" value={gold24Price} onChange={e => setGold24Price(e.target.value)} className="w-full p-2 rounded-lg border focus:ring-2 focus:outline-none" style={inputStyle} />
-                                </div>
-                                <div className="grid grid-cols-[auto_1fr_1fr] gap-3 items-center">
-                                    <span className="text-sm font-bold w-12" style={{ color: theme.textColor }}>عيار 21</span>
-                                    <input type="number" placeholder="الوزن (جرام)" value={gold21Weight} onChange={e => setGold21Weight(e.target.value)} className="w-full p-2 rounded-lg border focus:ring-2 focus:outline-none" style={inputStyle} />
-                                    <input type="number" placeholder="سعر الجرام" value={gold21Price} onChange={e => setGold21Price(e.target.value)} className="w-full p-2 rounded-lg border focus:ring-2 focus:outline-none" style={inputStyle} />
-                                </div>
-                                <div className="grid grid-cols-[auto_1fr_1fr] gap-3 items-center">
-                                    <span className="text-sm font-bold w-12" style={{ color: theme.textColor }}>عيار 18</span>
-                                    <input type="number" placeholder="الوزن (جرام)" value={gold18Weight} onChange={e => setGold18Weight(e.target.value)} className="w-full p-2 rounded-lg border focus:ring-2 focus:outline-none" style={inputStyle} />
-                                    <input type="number" placeholder="سعر الجرام" value={gold18Price} onChange={e => setGold18Price(e.target.value)} className="w-full p-2 rounded-lg border focus:ring-2 focus:outline-none" style={inputStyle} />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-sm font-bold mb-1 opacity-80" style={{ color: theme.textColor }}>وزن الفضة (جرام)</label>
-                                    <input type="number" placeholder="الوزن" value={silverWeight} onChange={e => setSilverWeight(e.target.value)} className="w-full p-3 rounded-lg border focus:ring-2 focus:outline-none" style={inputStyle} />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold mb-1 opacity-80" style={{ color: theme.textColor }}>سعر جرام الفضة</label>
-                                    <input type="number" placeholder="السعر" value={silverPrice} onChange={e => setSilverPrice(e.target.value)} className="w-full p-3 rounded-lg border focus:ring-2 focus:outline-none" style={inputStyle} />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="mt-6 p-4 rounded-xl bg-primary/10 border border-primary/20 text-center">
-                            <p className="text-sm font-bold opacity-80 mb-1" style={{ color: theme.textColor }}>مقدار الزكاة الواجب إخراجها</p>
-                            <p className={`${calculateZakat() === 'لا يوجد زكاة' ? 'text-xl' : 'text-3xl'} font-bold text-primary transition-all duration-300`}>
-                                {calculateZakat()}
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                {/* Mawarith Tab */}
-                {activeTab === 'mawarith' && (
-                    <div className="themed-card p-4 rounded-xl space-y-4 animate-fade-in">
-                        <div className="flex items-center justify-between mb-2">
-                            <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: theme.textColor }}>
-                                <i className="fa-solid fa-scale-balanced text-primary"></i> توزيع الميراث
-                            </h2>
-                        </div>
-
-                        <div>
-                            <input type="number" placeholder="قيمة التركة الإجمالية" value={estateValue} onChange={e => setEstateValue(e.target.value)} className="w-full p-2 rounded-lg border focus:ring-2 focus:outline-none text-center font-bold" style={inputStyle} />
-                        </div>
-
-                        <div className="space-y-3">
-                            {/* الأصول (الآباء والأمهات والأجداد) */}
-                            <div className="grid grid-cols-2 gap-2">
-                                {renderCheckbox('الأب', hasFather, setHasFather)}
-                                {renderCheckbox('الأم', hasMother, setHasMother)}
-                                {showPaternalGrandfather && renderCheckbox('الجد لأب', hasPaternalGrandfather, setHasPaternalGrandfather)}
-                                {showMaternalGrandmother && renderCheckbox('الجدة لأم', hasMaternalGrandmother, setHasMaternalGrandmother)}
-                                {showPaternalGrandmother && renderCheckbox('الجدة لأب', hasPaternalGrandmother, setHasPaternalGrandmother)}
-                            </div>
-
-                            {/* الزوجين */}
-                            <div className="flex flex-wrap gap-2">
-                                <label className="flex items-center gap-1 cursor-pointer p-1.5 px-3 rounded-lg border text-sm" style={{ ...inputStyle, borderColor: spouseType === 'none' ? 'var(--color-primary)' : inputStyle.borderColor }}>
-                                    <input type="radio" name="spouse" checked={spouseType === 'none'} onChange={() => setSpouseType('none')} className="w-4 h-4 accent-primary" />
-                                    <span style={{ color: theme.textColor }}>لا يوجد زوج/ة</span>
-                                </label>
-                                <label className="flex items-center gap-1 cursor-pointer p-1.5 px-3 rounded-lg border text-sm" style={{ ...inputStyle, borderColor: spouseType === 'husband' ? 'var(--color-primary)' : inputStyle.borderColor }}>
-                                    <input type="radio" name="spouse" checked={spouseType === 'husband'} onChange={() => setSpouseType('husband')} className="w-4 h-4 accent-primary" />
-                                    <span style={{ color: theme.textColor }}>زوج</span>
-                                </label>
-                                <label className="flex items-center gap-1 cursor-pointer p-1.5 px-3 rounded-lg border text-sm" style={{ ...inputStyle, borderColor: spouseType === 'wife' ? 'var(--color-primary)' : inputStyle.borderColor }}>
-                                    <input type="radio" name="spouse" checked={spouseType === 'wife'} onChange={() => setSpouseType('wife')} className="w-4 h-4 accent-primary" />
-                                    <span style={{ color: theme.textColor }}>زوجة</span>
-                                </label>
-                                {spouseType === 'wife' && (
-                                    <input type="number" min="1" max="4" value={wivesCount} onChange={e => setWivesCount(parseInt(e.target.value) || 1)} className="w-16 p-1 rounded-lg border text-center text-sm" style={inputStyle} />
-                                )}
-                            </div>
-
-                            {/* الفروع (الأبناء والبنات وأبناؤهم) */}
-                            <div className="grid grid-cols-2 gap-2">
-                                {renderNumberInput('عدد الأبناء (ذكور)', sonsCount, setSonsCount)}
-                                {renderNumberInput('عدد البنات (إناث)', daughtersCount, setDaughtersCount)}
-                                {showGrandsons && renderNumberInput('أبناء الابن', grandsonsCount, setGrandsonsCount)}
-                                {showGranddaughters && renderNumberInput('بنات الابن', granddaughtersCount, setGranddaughtersCount)}
-                            </div>
-
-                            {/* الإخوة والأخوات */}
-                            {(showFullSiblings || showPaternalSiblings || showMaternalSiblings) && (
-                                <div className="grid grid-cols-2 gap-2 border-t pt-2" style={{ borderColor: theme.isOriginal ? '#e5e7eb' : 'rgba(255,255,255,0.1)' }}>
-                                    {showFullSiblings && renderNumberInput('إخوة أشقاء', fullBrothersCount, setFullBrothersCount)}
-                                    {showFullSiblings && renderNumberInput('أخوات شقيقات', fullSistersCount, setFullSistersCount)}
-                                    {showPaternalSiblings && renderNumberInput('إخوة لأب', paternalBrothersCount, setPaternalBrothersCount)}
-                                    {showPaternalSiblings && renderNumberInput('أخوات لأب', paternalSistersCount, setPaternalSistersCount)}
-                                    {showMaternalSiblings && renderNumberInput('إخوة لأم (ذكور وإناث)', maternalSiblingsCount, setMaternalSiblingsCount)}
-                                </div>
-                            )}
-
-                            {/* أبناء الإخوة والأعمام وأبناؤهم */}
-                            {(showFullNephews || showPaternalNephews || showFullUncles || showPaternalUncles || showFullCousins || showPaternalCousins) && (
-                                <div className="grid grid-cols-2 gap-2 border-t pt-2" style={{ borderColor: theme.isOriginal ? '#e5e7eb' : 'rgba(255,255,255,0.1)' }}>
-                                    {showFullNephews && renderNumberInput('أبناء الأخ الشقيق', fullNephewsCount, setFullNephewsCount)}
-                                    {showPaternalNephews && renderNumberInput('أبناء الأخ لأب', paternalNephewsCount, setPaternalNephewsCount)}
-                                    {showFullUncles && renderNumberInput('أعمام أشقاء', fullUnclesCount, setFullUnclesCount)}
-                                    {showPaternalUncles && renderNumberInput('أعمام لأب', paternalUnclesCount, setPaternalUnclesCount)}
-                                    {showFullCousins && renderNumberInput('أبناء العم الشقيق', fullCousinsCount, setFullCousinsCount)}
-                                    {showPaternalCousins && renderNumberInput('أبناء العم لأب', paternalCousinsCount, setPaternalCousinsCount)}
-                                </div>
-                            )}
-                        </div>
-
-                        {mawarithResults.length > 0 && (
-                            <div className="mt-4">
-                                <div className="rounded-lg overflow-hidden border" style={{ borderColor: theme.isOriginal ? '#e5e7eb' : 'rgba(255,255,255,0.1)' }}>
-                                    <table className="w-full text-right text-sm">
-                                        <thead className="bg-primary/10">
-                                            <tr>
-                                                <th className="p-2 font-bold" style={{ color: theme.textColor }}>الوارث</th>
-                                                <th className="p-2 font-bold" style={{ color: theme.textColor }}>النسبة</th>
-                                                <th className="p-2 font-bold" style={{ color: theme.textColor }}>المبلغ</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {mawarithResults.map((result, idx) => (
-                                                <tr key={idx} className="border-t" style={{ borderColor: theme.isOriginal ? '#e5e7eb' : 'rgba(255,255,255,0.05)' }}>
-                                                    <td className="p-2 font-semibold" style={{ color: theme.textColor }}>
-                                                        {result.name} <span className="text-[10px] opacity-60">({result.type})</span>
-                                                    </td>
-                                                    <td className="p-2 opacity-80" style={{ color: theme.textColor }}>{(result.share * 100).toFixed(1)}%</td>
-                                                    <td className="p-2 font-bold text-primary">{result.amount.toFixed(2)}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="mt-4 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                            <p className="text-[10px] leading-relaxed text-center opacity-80" style={{ color: theme.textColor }}>
-                                ⚠️ هذه الحاسبة استرشادية وتدعم الحجب الأساسي. قد لا تشمل بعض المسائل المعقدة (كالمشتركة والأكدرية). يُرجى مراجعة المحاكم الشرعية للاعتماد الرسمي.
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                {/* Kaffarat Tab */}
-                {activeTab === 'kaffarat' && (
-                    <div className="themed-card p-5 rounded-xl space-y-6 animate-fade-in">
-                        <div>
-                            <h2 className="text-xl font-bold mb-4 flex items-center gap-2" style={{ color: theme.textColor }}>
-                                <i className="fa-solid fa-bowl-food text-primary"></i> فدية الصيام
-                            </h2>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-sm font-bold mb-1 opacity-80" style={{ color: theme.textColor }}>عدد الأيام</label>
-                                    <input type="number" placeholder="الأيام" value={missedFastingDays} onChange={e => setMissedFastingDays(e.target.value)} className="w-full p-3 rounded-lg border focus:ring-2 focus:outline-none" style={inputStyle} />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold mb-1 opacity-80" style={{ color: theme.textColor }}>تكلفة إطعام مسكين</label>
-                                    <input type="number" placeholder="التكلفة" value={feedingCost} onChange={e => setFeedingCost(e.target.value)} className="w-full p-3 rounded-lg border focus:ring-2 focus:outline-none" style={inputStyle} />
-                                </div>
-                            </div>
-                            <div className="mt-3 p-3 rounded-lg bg-primary/10 text-center">
-                                <span className="font-bold opacity-80" style={{ color: theme.textColor }}>الإجمالي: </span>
-                                <span className="text-xl font-bold text-primary">
-                                    {((parseFloat(missedFastingDays) || 0) * (parseFloat(feedingCost) || 0)).toFixed(2)}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="border-t pt-6" style={{ borderColor: theme.isOriginal ? '#e5e7eb' : 'rgba(255,255,255,0.1)' }}>
-                            <h2 className="text-xl font-bold mb-4 flex items-center gap-2" style={{ color: theme.textColor }}>
-                                <i className="fa-solid fa-hand-holding-heart text-primary"></i> كفارة اليمين
-                            </h2>
-                            <p className="text-sm mb-3 opacity-80" style={{ color: theme.textColor }}>إطعام عشرة مساكين من أوسط ما تطعمون أهليكم</p>
-                            <div>
-                                <label className="block text-sm font-bold mb-1 opacity-80" style={{ color: theme.textColor }}>تكلفة الوجبة الواحدة</label>
-                                <input type="number" placeholder="التكلفة" value={feedingCost} onChange={e => setFeedingCost(e.target.value)} className="w-full p-3 rounded-lg border focus:ring-2 focus:outline-none" style={inputStyle} />
-                            </div>
-                            <div className="mt-3 p-3 rounded-lg bg-primary/10 text-center">
-                                <span className="font-bold opacity-80" style={{ color: theme.textColor }}>الإجمالي لـ 10 مساكين: </span>
-                                <span className="text-xl font-bold text-primary">
-                                    {((parseFloat(feedingCost) || 0) * 10).toFixed(2)}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
+            <main id="calc-scroll-container" className="flex-1 overflow-y-auto px-4 pb-4 hide-scrollbar font-cairo bg-gray-50/50 dark:bg-black/20">
+                <div className="max-w-3xl mx-auto pt-2">
+                    {activeTab === 'zakat' && <ZakatCalculator cardBorderColor={cardBorderColor} />}
+                    {activeTab === 'mawarith' && <MawarithCalculator cardBorderColor={cardBorderColor} />}
+                    {activeTab === 'kaffarat' && <KaffaratCalculator cardBorderColor={cardBorderColor} />}
+                    {activeTab === 'fitr-udhiyah' && (
+                        <FitrAndUdhiyahCalculator 
+                            cardBorderColor={cardBorderColor}
+                            subTab={fitrUdhiyahSubTab}
+                            onSubTabChange={handleFitrUdhiyahSubTabChange}
+                        />
+                    )}
+                </div>
+                <div className="shrink-0 w-full h-6"></div>
             </main>
 
-            <BottomBar onHomeClick={onBack} onThemesClick={() => {}} showThemes={false} />
+            {/* Interactive Spotlight Guide */}
+            <CommunitySpotlightGuide
+                guideKey={activeGuide.key}
+                steps={activeGuide.steps}
+                isOpen={showGuide}
+                onClose={() => setShowGuide(false)}
+                isEn={isEn}
+            />
         </div>
     );
 };
 
 export default Calculators;
+

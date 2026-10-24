@@ -1,7 +1,12 @@
 {
-  "name": "2.11  مصحف أحمد وليلى",
-  "description": "تطبيق إسلامي شامل يعمل بدون انترنت، يحتوي على القرآن الكريم، أذكار، تسبيح، مواقيت الصلاة، والمزيد. مصمم ليكون رفيقك اليومي.",
+  "name": "Remix Remix Remix Remix Remix Remix Remix Remix Remix Remix Quran 1.28 chat",
+  "description": "تطبيق إسلامي شامل يعمل بدون انترنت، يحتوي على القرآن الكريم، أذكار، تسبيح، مواقيت الصلاة، وقائمة تطبيقات متنوعة. مصمم ليكون رفيقك اليومي.",
   "requestFramePermissions": [
-    "geolocation"
+    "geolocation",
+    "microphone",
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
 }

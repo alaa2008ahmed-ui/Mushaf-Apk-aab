@@ -1,117 +1,105 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Capacitor } from '@capacitor/core';
-import BottomBar from '../components/BottomBar';
 import { useTheme } from '../context/ThemeContext';
-import { prayerNamesAr } from '../data/prayerTimesData';
+import { useLanguage } from '../context/LanguageContext';
+import { prayerNamesAr, internetTones } from '../data/prayerTimesData';
 import { usePrayerTimes, copyAssetToDevice } from '../context/PrayerTimesContext';
 import { registerBackInterceptor } from '../hooks/useBackButton';
-
-const internetTones = [
-    { name: "أذان 1", path: "/assets/audio/azan1.mp3" },
-    { name: "أذان 2", path: "/assets/audio/azan2.mp3" },
-    { name: "أذان 3", path: "/assets/audio/azan3.mp3" },
-    { name: "أذان 4", path: "/assets/audio/azan4.mp3" },
-    { name: "تكبيرة 1", path: "/assets/audio/takbeer1.mp3" },
-    { name: "تكبيرة 2", path: "/assets/audio/takbeer2.mp3" },
-    { name: "تكبيرة 3", path: "/assets/audio/takbeer3.mp3" },
-    { name: "تكبيرة 4", path: "/assets/audio/takbeer4.mp3" },
-    { name: "تكبيرة 5", path: "/assets/audio/takbeer5.mp3" },
-    { name: "تكبيرة 6", path: "/assets/audio/takbeer6.mp3" },
-    { name: "الصلاة", path: "/assets/audio/Salah.mp3" },
-    { name: "الشهادة", path: "/assets/audio/shahadah.mp3" },
-];
-
-// Helper Functions
-const applyOffset = (timeStr, offsetMins) => {
-    if (!timeStr || timeStr.includes('--')) return "--:--";
-    let [h, m] = timeStr.split(':');
-    let date = new Date();
-    date.setHours(parseInt(h), parseInt(m), 0);
-    date.setMinutes(date.getMinutes() + (offsetMins || 0));
-    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-}
-
-const formatTime12 = (time) => {
-    if(!time || time.includes('--')) return "--:-- --";
-    let [h, m] = time.split(':');
-    h = parseInt(h);
-    const ap = h >= 12 ? 'pm' : 'am';
-    h = h % 12 || 12;
-    return `<span class="text-xl font-black">${h}:${m.toString().padStart(2, '0')}</span> <span class="time-period">${ap}</span>`;
-};
-
-const formatTime12_EN = (time) => {
-    if (!time || time.includes('--')) return "--:-- --";
-    let [h, m] = time.split(':');
-    h = parseInt(h);
-    const ap = h >= 12 ? 'pm' : 'am';
-    h = h % 12 || 12;
-    return `${h}:${m.toString().padStart(2, '0')} ${ap}`;
-}
-
-const formatTime12_clean = (time) => {
-    if (!time || time.includes('--')) return "--:-- --";
-    let [h, m] = time.split(':');
-    h = parseInt(h);
-    const ap = h >= 12 ? 'pm' : 'am';
-    h = h % 12 || 12;
-    return `${h}:${m.toString().padStart(2, '0')} ${ap}`;
-}
-
-const getMediaURL = (s) => {
-    if (!s) return '';
-    if (s.startsWith('file://')) {
-        return Capacitor.convertFileSrc(s);
-    }
-    // For bundled assets starting with '/', return as is so the WebView loads them from its local server
-    return s;
-};
-
-// Global audio instance for previewing tones
-let previewAudio: HTMLAudioElement | null = null;
-
-const playNotificationSound = (source) => {
-    if (!source || source === 'none') return;
-    const mediaUrl = getMediaURL(source);
-    
-    // Stop any currently playing preview
-    stopNotificationSound();
-
-    try {
-        previewAudio = new Audio(mediaUrl);
-        previewAudio.play().catch(e => console.error("Audio play failed:", e));
-    } catch (e) {
-        console.error("Failed to play notification sound with HTML5 Audio:", e);
-    }
-};
-
-const stopNotificationSound = () => {
-    if (previewAudio) {
-        previewAudio.pause();
-        previewAudio.currentTime = 0;
-        previewAudio = null;
-    }
-};
-
+import PrayerTimesSettingsModal from '../components/PrayerTimes/PrayerTimesSettingsModal';
+import PrayerCard from '../components/PrayerTimes/PrayerCard';
+import PrayerTimesHeader from '../components/PrayerTimes/PrayerTimesHeader';
+import PrayerTimesDateSearch from '../components/PrayerTimes/PrayerTimesDateSearch';
+import NextPrayerCard from '../components/PrayerTimes/NextPrayerCard';
+import NotificationSettingsModal from '../components/QuranReader/NotificationSettingsModal';
+import { MapPin, Calendar, Bell } from 'lucide-react';
+import { Browser } from '@capacitor/browser';
+import { Capacitor } from '@capacitor/core';
+import { CommunitySpotlightGuide, getGuideSeen } from '../components/Community/CommunitySpotlightGuide';
+import { PRAYER_TIMES_PAGE_STEPS } from '../components/Community/communityTourSteps';
+import { markPageAsSeen } from '../utils/badgeManager';
+import {
+    applyOffset,
+    formatTime12,
+    formatTime12_EN,
+    formatTime12_clean,
+    playNotificationSound,
+    stopNotificationSound,
+    checkSupportsDST,
+    calculateNightTimes
+} from '../utils/prayerTimesUtils';
+import { tPrayer, getPrayerDisplayName } from '../utils/prayerTimesTranslations';
 
 // Main Component
-function PrayerTimes({ onBack }) {
+function PrayerTimes({ onBack, onNavigate }) {
     const { theme, themeKey } = useTheme();
-    const { times, dates, nextPrayer, countdown, config, refreshLocation, manualSearch, updateConfig } = usePrayerTimes();
+    const { language, isRTL, dir } = useLanguage();
+    const { 
+        times, dates, nextPrayer, countdown, config, refreshLocation, manualSearch, updateConfig,
+        isPrayerSilentActive, activeSilentPrayerName
+    } = usePrayerTimes();
 
-    const isBlackAndWhite = themeKey === 'black_and_white';
-    const primaryColor = isBlackAndWhite ? '#FFFFFF' : theme.palette[0];
-    const secondaryColor = isBlackAndWhite ? '#FFFFFF' : theme.palette[1];
-    const topBarTextColor = theme.topBarText || (isBlackAndWhite ? '#FFFFFF' : theme.palette[0]);
+    const isDefaultTheme = themeKey === 'default' || !themeKey || theme.name?.includes('الافتراضي') || theme.name === 'Default';
+    const isBlackAndWhite = themeKey === 'deep_black' || theme.name === 'اسود';
+    const isBlackTheme = theme.bgColor === '#000000' || theme.name === 'أبيض وأسود' || theme.name === 'اسود' || themeKey === 'deep_black';
+    const primaryColor = isBlackTheme ? '#FFFFFF' : (isDefaultTheme ? '#000000' : (isBlackAndWhite ? '#FFFFFF' : theme.palette[0]));
+    const secondaryColor = isBlackTheme ? '#FFFFFF' : (isDefaultTheme ? '#000000' : (isBlackAndWhite ? '#FFFFFF' : theme.palette[1]));
+    const topBarTextColor = isBlackTheme ? '#FFFFFF' : (isDefaultTheme ? '#000000' : (theme.topBarText || (isBlackAndWhite ? '#FFFFFF' : theme.palette[0])));
+
+    const cardBorderColor = isDefaultTheme 
+      ? '#000000' 
+      : (isBlackTheme 
+          ? '#FFFFFF' 
+          : (theme.palette?.[0] || theme.accent || '#000000'));
+
+    const getNextPrayerBorderColor = () => {
+        if (isDefaultTheme) {
+            return '#059669'; // زمردي إسلامي مميز يختلف دائماً عن الأسود
+        }
+        if (isBlackTheme || isBlackAndWhite) {
+            return '#10b981'; // زمردي مضيء يختلف دائماً عن الأبيض
+        }
+        const pal0 = (theme.palette?.[0] || '').toLowerCase();
+        const isGreenTheme = pal0.includes('059669') || pal0.includes('10b981') || pal0.includes('16a34a') || pal0.includes('22c55e') || theme.name?.includes('أخضر') || theme.name?.includes('زيتوني') || theme.name?.includes('الروضة');
+        if (isGreenTheme) {
+            return '#d97706'; // عنبري ذهبي مختلف تماماً عن الأخضر
+        }
+        const isWarmTheme = pal0.includes('d97706') || pal0.includes('f59e0b') || pal0.includes('eab308') || theme.name?.includes('ذهبي') || theme.name?.includes('برتقالي') || theme.name?.includes('غروب');
+        if (isWarmTheme) {
+            return '#059669'; // زمردي مختلف تماماً عن الذهبي والبرتقالي
+        }
+        return '#059669'; // زمردي مميز وفاخر لسائر الثيمات الملونة
+    };
+
+    const nextPrayerBorderColor = getNextPrayerBorderColor();
+    const nextPrayerCardBorderColor = isDefaultTheme
+        ? '#059669'
+        : (isBlackTheme || isBlackAndWhite
+            ? '#FFFFFF'
+            : (theme.palette?.[0] || theme.accent || '#059669'));
 
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
     const [currentEditingKey, setCurrentEditingKey] = useState(null);
     const [tempOffset, setTempOffset] = useState(0);
     const [tempIqama, setTempIqama] = useState(0);
+    const [tempIqamaEnabled, setTempIqamaEnabled] = useState(false);
+    const [tempPreReminderEnabled, setTempPreReminderEnabled] = useState(false);
+    const [tempPreReminderMinutes, setTempPreReminderMinutes] = useState(15);
+    const [tempAutoSilentEnabled, setTempAutoSilentEnabled] = useState(false);
+    const [tempAutoSilentDuration, setTempAutoSilentDuration] = useState(15);
     const [searchInput, setSearchInput] = useState("");
     const searchIconRef = useRef(null);
     const [toastMessage, setToastMessage] = useState('');
+    const [showGuide, setShowGuide] = useState(false);
+
+    useEffect(() => {
+        markPageAsSeen('prayer_times');
+    }, []);
     
+    const isAudioMuted = config.audioMutedUntil && Date.now() < config.audioMutedUntil;
+    
+    const supportsDST = checkSupportsDST(config.location.combinedCode, config.location.fullCountry);
+    const isSummerTimeActive = config.isSummerTime && supportsDST;
+
     useEffect(() => {
         if (toastMessage) {
             const timer = setTimeout(() => setToastMessage(''), 3000);
@@ -124,23 +112,43 @@ function PrayerTimes({ onBack }) {
     useEffect(() => {
         const interceptor = () => {
             if (isModalOpen) {
-                setIsModalOpen(false);
+                closeModal();
+                return true;
+            }
+            if (isNotifModalOpen) {
+                setIsNotifModalOpen(false);
                 return true;
             }
             return false;
         };
         const unregister = registerBackInterceptor(interceptor);
         return unregister;
-    }, [isModalOpen]);
+    }, [isModalOpen, isNotifModalOpen]);
+
+    const handleBack = () => {
+        if (isModalOpen) {
+            closeModal();
+        } else if (isNotifModalOpen) {
+            setIsNotifModalOpen(false);
+        } else {
+            onBack();
+        }
+    };
+
+    const handleGoHome = () => {
+        if (isModalOpen) closeModal();
+        if (isNotifModalOpen) setIsNotifModalOpen(false);
+        onNavigate('home');
+    };
 
     const handleRefreshLocation = async () => {
-        showToast("جاري تحديد الموقع الحالي...");
+        showToast(tPrayer('toastLocating', language));
         try {
-            await refreshLocation();
-            showToast("تم تحديث الموقع بنجاح");
+            await refreshLocation(true);
+            showToast(tPrayer('toastLocationSuccess', language));
         } catch (e) {
             console.error(e);
-            showToast("حدث خطأ أثناء تحديد الموقع");
+            showToast(tPrayer('toastLocationError', language));
         }
     };
 
@@ -149,17 +157,48 @@ function PrayerTimes({ onBack }) {
         if (searchIconRef.current) searchIconRef.current.className = 'fa-solid fa-spinner fa-spin';
         try {
             await manualSearch(searchInput);
+            showToast(tPrayer('toastCitySuccess', language));
         } catch(e) { 
             console.error(e); 
-            showToast("حدث خطأ أثناء البحث أو لم يتم العثور على نتائج.");
+            showToast(tPrayer('toastSearchError', language));
         } 
         finally { if (searchIconRef.current) searchIconRef.current.className = 'fa-solid fa-magnifying-glass'; }
-    }
+    };
     
     const openSettings = (key) => {
         setCurrentEditingKey(key);
         setTempOffset(config.prayerOffsets[key] || 0);
         setTempIqama(config.iqamaOffsets[key] || 0);
+        
+        // Load per-prayer or global defaults for Iqama
+        const prayerIqama = config.prayerIqamaReminders?.[key];
+        if (prayerIqama) {
+            setTempIqamaEnabled(!!prayerIqama.enabled);
+            setTempIqama(prayerIqama.minutes ?? config.iqamaOffsets[key] ?? 15);
+        } else {
+            setTempIqamaEnabled(!!config.iqamaReminder?.enabled);
+            setTempIqama(config.iqamaOffsets[key] || 15);
+        }
+
+        // Load per-prayer or global defaults for Pre-Reminder
+        const prayerPre = config.prayerPreReminders?.[key];
+        if (prayerPre) {
+            setTempPreReminderEnabled(!!prayerPre.enabled);
+            setTempPreReminderMinutes(prayerPre.minutes || 15);
+        } else {
+            setTempPreReminderEnabled(!!config.preAthanReminder?.enabled);
+            setTempPreReminderMinutes(config.preAthanReminder?.minutes || 15);
+        }
+
+        const prayerSilent = config.prayerAutoSilent?.[key];
+        if (prayerSilent) {
+            setTempAutoSilentEnabled(prayerSilent.enabled);
+            setTempAutoSilentDuration(prayerSilent.duration || 15);
+        } else {
+            setTempAutoSilentEnabled(!!config.autoSilent);
+            setTempAutoSilentDuration(config.autoSilentDuration || 15);
+        }
+
         setIsModalOpen(true);
     };
 
@@ -167,8 +206,30 @@ function PrayerTimes({ onBack }) {
         stopNotificationSound(); // Stop audio preview on save
         updateConfig({
             prayerOffsets: { ...config.prayerOffsets, [currentEditingKey]: tempOffset },
-            iqamaOffsets: { ...config.iqamaOffsets, [currentEditingKey]: tempIqama }
+            iqamaOffsets: { ...config.iqamaOffsets, [currentEditingKey]: tempIqama },
+            prayerIqamaReminders: {
+                ...(config.prayerIqamaReminders || {}),
+                [currentEditingKey]: {
+                    enabled: tempIqamaEnabled,
+                    minutes: tempIqama
+                }
+            },
+            prayerPreReminders: {
+                ...(config.prayerPreReminders || {}),
+                [currentEditingKey]: {
+                    enabled: tempPreReminderEnabled,
+                    minutes: tempPreReminderMinutes
+                }
+            },
+            prayerAutoSilent: {
+                ...(config.prayerAutoSilent || {}),
+                [currentEditingKey]: {
+                    enabled: tempAutoSilentEnabled,
+                    duration: tempAutoSilentDuration
+                }
+            }
         });
+        showToast(tPrayer('toastSettingsSaved', language));
         setIsModalOpen(false);
     };
 
@@ -178,10 +239,31 @@ function PrayerTimes({ onBack }) {
     };
 
     const togglePrayerSound = (key) => {
+        if (isAudioMuted) {
+            showToast(tPrayer('toastAudioMutedNotice', language));
+            return;
+        }
+        const willBeMuted = !config.mutedPrayers[key];
+        if (willBeMuted) {
+            stopNotificationSound();
+        }
         updateConfig({
-            mutedPrayers: {...config.mutedPrayers, [key]: !config.mutedPrayers[key] }
+            mutedPrayers: {...config.mutedPrayers, [key]: willBeMuted }
         });
+        const pName = getPrayerDisplayName(key, language);
+        showToast(
+            willBeMuted 
+                ? tPrayer('toastPrayerDisabled', language, { p: pName })
+                : tPrayer('toastPrayerEnabled', language, { p: pName })
+        );
     }
+
+    const toggleSummerTime = () => {
+        if (!supportsDST) return;
+        const newState = !config.isSummerTime;
+        updateConfig({ isSummerTime: newState });
+        showToast(newState ? tPrayer('toastDstEnabled', language) : tPrayer('toastDstDisabled', language));
+    };
 
     const handleToneSelection = async (e) => {
         const value = e.target.value;
@@ -198,19 +280,19 @@ function PrayerTimes({ onBack }) {
                 try {
                     let localUri = selectedInternet.path;
                     if (localUri.startsWith('http')) {
-                        showToast("جاري تحميل الصوت للمعاينة...");
+                        showToast(tPrayer('toastDownloadingTone', language));
                         localUri = await copyAssetToDevice(selectedInternet.path);
                     }
-                    playNotificationSound(localUri); // Play preview
+                    playNotificationSound(localUri, true); // Play preview immediately
                     updateConfig({
                         tones: { ...config.tones, [currentEditingKey]: { name: selectedInternet.name, data: localUri, originalUrl: selectedInternet.path }}
                     });
                     if (localUri.startsWith('http')) {
-                        showToast("تم اختيار الصوت بنجاح");
+                        showToast(tPrayer('toastToneSelected', language));
                     }
                 } catch (err) {
                     console.error("Failed to download tone:", err);
-                    showToast("فشل في تحميل الملف الصوتي. يرجى التحقق من اتصالك بالإنترنت.");
+                    showToast(tPrayer('toastToneDownloadFailed', language));
                 }
             }
         }
@@ -222,7 +304,7 @@ function PrayerTimes({ onBack }) {
             const reader = new FileReader();
             reader.onload = (event) => {
                 const audioDataUrl = event.target.result as string;
-                playNotificationSound(audioDataUrl); // Play preview
+                playNotificationSound(audioDataUrl, true); // Play preview immediately
                 updateConfig({
                     tones: { ...config.tones, [currentEditingKey]: { name: file.name, data: audioDataUrl }}
                 });
@@ -231,180 +313,274 @@ function PrayerTimes({ onBack }) {
         }
     };
 
-    const renderToneSelector = () => {
-        if (!currentEditingKey) return null;
-        
-        const currentTone = config.tones[currentEditingKey];
-        let selectValue = '/assets/audio/takbeer1.mp3'; // Default to Takbeer 1
-        if (currentTone) {
-            if (currentTone.data === 'none') {
-                selectValue = 'none';
-            } else if (currentTone.data.startsWith('data:')) {
-                selectValue = 'custom';
-            } else if (currentTone.originalUrl) {
-                selectValue = currentTone.originalUrl;
-            } else {
-                selectValue = currentTone.data;
-            }
-        }
-
-        return (
-            <div>
-                <label className="block text-[10px] font-black mb-2 uppercase tracking-widest" style={{ color: secondaryColor }}>نغمة التنبيه</label>
-                <div className="relative">
-                    <select value={selectValue} onChange={handleToneSelection} className="w-full appearance-none themed-bg-alt border themed-card-border rounded-xl py-3 px-4 text-xs font-bold" style={{ color: primaryColor }}>
-                        <option value="none">بدون تنبيه</option>
-                        {internetTones.map(tone => <option key={tone.path} value={tone.path}>{tone.name}</option>)}
-                        <option value="custom">نغمة مخصصة...</option>
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center px-3">
-                         <i className="fa-solid fa-chevron-down text-xs" style={{color: secondaryColor}}></i>
-                    </div>
-                </div>
-                <input type="file" id="sound-file-input" accept="audio/*" className="hidden" onChange={handleToneUpload}/>
-                {selectValue === 'custom' && currentTone && <p className="text-center text-[10px] mt-1 truncate" style={{ color: secondaryColor }}>الملف الحالي: {currentTone.name}</p>}
-            </div>
-        );
-    };
-
     return (
-        <div className="h-screen w-screen flex flex-col" style={{ backgroundColor: 'transparent', color: theme.textColor }}>
-            <header className="app-top-bar">
-                <div className="app-top-bar__inner">
-                    <div className="flex items-center justify-center gap-2">
-                        <i onClick={handleRefreshLocation} className="text-xl cursor-pointer active:rotate-180 duration-700 fa-solid fa-location-crosshairs" style={{ color: topBarTextColor }}></i>
-                        <h1 className="app-top-bar__title text-xl sm:text-2xl font-kufi truncate" style={{ color: topBarTextColor }}>{config.location.cityGov}</h1>
-                    </div>
-                     <div className="flex items-center justify-center gap-2" dir="rtl">
-                        <p className="text-xs font-bold" style={{ color: topBarTextColor }}>{config.location.fullCountry}</p>
-                        {config.location.combinedCode && (
-                            <span className="text-xs font-black text-white bg-black/20 px-2 py-0.5 rounded-md border border-white/20" dir="ltr">{config.location.combinedCode}</span>
-                        )}
-                    </div>
-                </div>
-            </header>
+        <div 
+            dir={dir}
+            className="h-[100dvh] w-full flex flex-col" 
+            style={{ backgroundColor: isDefaultTheme ? '#FFFFFF' : 'transparent', color: isDefaultTheme ? '#000000' : theme.textColor }}
+        >
+            <PrayerTimesHeader 
+                handleRefreshLocation={handleRefreshLocation}
+                onOpenNotifications={() => setIsNotifModalOpen(true)}
+                cityGov={config.location.cityGov}
+                fullCountry={config.location.fullCountry}
+                combinedCode={config.location.combinedCode}
+                topBarTextColor={topBarTextColor}
+                onBack={handleBack}
+                onHome={handleGoHome}
+                onOpenGuide={() => setShowGuide(true)}
+            />
 
-            <main className="flex-1 overflow-y-auto hide-scrollbar p-4 pb-24">
-                <div className="max-w-md mx-auto">
-                    <div className="themed-card rounded-2xl p-2.5 flex items-center justify-between shadow-sm mb-5">
-                        <div className="flex-1 text-center border-l themed-text-muted/20">
-                            <p className="text-[9px] font-bold uppercase mb-0.5" style={{ color: secondaryColor }}>التاريخ الهجري</p>
-                            <p className="text-xs font-bold" style={{color: secondaryColor}}>{dates.hijri}</p>
-                        </div>
-                        <div className="flex-1 text-center">
-                            <p className="text-[9px] font-bold uppercase mb-0.5" style={{ color: primaryColor }}>التاريخ الميلادي</p>
-                            <p className="text-xs font-bold" style={{color: primaryColor}}>{dates.gregorian}</p>
-                        </div>
-                    </div>
-
-                     <div className="flex items-center justify-center gap-3 mb-5 px-1">
-                        <button onClick={handleManualSearch} className="themed-card text-sm font-black px-3 py-1.5 rounded-lg shadow-sm active:scale-95 hover:bg-card-bg-hover" style={{ color: primaryColor }}>بحث</button>
-                        <div className="flex-1 relative themed-card rounded-xl overflow-hidden shadow-sm">
-                            <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleManualSearch()} placeholder="عن مدينة أو محافظة..." 
-                                className="w-full bg-transparent py-2.5 px-4 pr-10 text-xs outline-none transition-all" style={{ color: primaryColor }}/>
-                            <button onClick={handleManualSearch} className="absolute right-3 top-2.5" style={{color: secondaryColor}}>
-                                <i ref={searchIconRef} className="fa-solid fa-magnifying-glass"></i>
+            <main className="flex-1 overflow-y-auto hide-scrollbar px-2 pt-2 pb-1">
+                <div className="max-w-md mx-auto flex flex-col">
+                    <div 
+                        className={`themed-card shrink-0 ${isDefaultTheme ? 'bg-white' : 'bg-black/5 dark:bg-white/5'} rounded-xl p-2 mb-1.5 shadow-sm`}
+                        style={{
+                            border: `1.5px solid ${cardBorderColor}`,
+                            backgroundColor: isDefaultTheme ? '#FFFFFF' : undefined
+                        }}
+                    >
+                        <div className="flex gap-2 mb-1.5">
+                            <button
+                                onClick={async () => {
+                                    const lat = config.location?.lat;
+                                    const lng = config.location?.lng;
+                                    let url = 'https://www.google.com/maps/search/?api=1&query=مسجد';
+                                    if (lat && lng) {
+                                        url = `https://www.google.com/maps/search/مسجد/@${lat},${lng},15z`;
+                                    }
+                                    if (Capacitor.isNativePlatform()) {
+                                        try {
+                                            await Browser.open({ url });
+                                        } catch (e) {
+                                            console.error("Browser open error:", e);
+                                            window.open(url, '_system');
+                                        }
+                                    } else {
+                                        window.open(url, '_blank');
+                                    }
+                                }}
+                                id="nearby-mosques-btn"
+                                className={`${isDefaultTheme ? 'bg-white' : 'themed-card'} flex-1 rounded-xl p-3 flex items-center justify-center gap-1.5 shadow-sm font-bold text-[13px] active:scale-95 transition-all hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer`}
+                                style={{ 
+                                    color: isBlackTheme ? '#FFFFFF' : primaryColor, 
+                                    border: `1.5px solid ${cardBorderColor}`,
+                                    backgroundColor: isDefaultTheme ? '#FFFFFF' : (isBlackTheme ? '#111111' : undefined) 
+                                }}
+                            >
+                                <MapPin size={18} className="shrink-0" style={{ color: isBlackTheme ? '#FFFFFF' : primaryColor }} />
+                                <span className="truncate whitespace-nowrap" style={{ color: isBlackTheme ? '#FFFFFF' : primaryColor }}>
+                                    {tPrayer('nearbyMosques', language)}
+                                </span>
+                            </button>
+                             <button
+                                onClick={() => onNavigate('monthly-prayer-times')}
+                                id="monthly-times-btn"
+                                className={`${isDefaultTheme ? 'bg-white' : 'themed-card'} flex-1 rounded-xl p-3 flex items-center justify-center gap-1.5 shadow-sm font-bold text-[13px] active:scale-95 transition-all hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer`}
+                                style={{ 
+                                    color: isBlackTheme ? '#FFFFFF' : secondaryColor, 
+                                    border: `1.5px solid ${cardBorderColor}`,
+                                    backgroundColor: isDefaultTheme ? '#FFFFFF' : (isBlackTheme ? '#111111' : undefined) 
+                                }}
+                            >
+                                <Calendar size={18} className="shrink-0" style={{ color: isBlackTheme ? '#FFFFFF' : secondaryColor }} />
+                                <span className="truncate whitespace-nowrap" style={{ color: isBlackTheme ? '#FFFFFF' : secondaryColor }}>
+                                    {tPrayer('monthlyTimes', language)}
+                                </span>
                             </button>
                         </div>
+
+                        <PrayerTimesDateSearch 
+                            searchInput={searchInput}
+                            setSearchInput={setSearchInput}
+                            handleManualSearch={handleManualSearch}
+                            searchIconRef={searchIconRef}
+                            primaryColor={primaryColor}
+                            secondaryColor={secondaryColor}
+                            cardBorderColor={cardBorderColor}
+                            isDefaultTheme={isDefaultTheme}
+                            isBlackTheme={isBlackTheme}
+                        />
                     </div>
                     
-                     {nextPrayer && times[nextPrayer.key] && (
-                        <div className="rounded-2xl p-3 text-white mb-5 relative overflow-hidden" style={{background: isBlackAndWhite ? `linear-gradient(135deg, #333, #000)` : `linear-gradient(135deg, ${theme.palette[1]}, ${theme.palette[0]})`}}>
-                            <div className="flex justify-between items-center relative z-10">
-                                <div className="text-right">
-                                    <p className="text-[10px] font-bold opacity-90">المتبقي على صلاة <span className="underline decoration-white/40">{nextPrayer.name}</span></p>
-                                    <p className="text-3xl font-black font-mono tracking-tighter">{countdown}</p>
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-[9px] font-bold opacity-80 uppercase">موعد الأذان</p>
-                                    <p className="text-base font-black" dangerouslySetInnerHTML={{ __html: formatTime12(applyOffset(times[nextPrayer.key], config.prayerOffsets[nextPrayer.key])) }}></p>
+                    {isAudioMuted && (
+                        <div className="bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl p-3 mb-4 flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                                <Bell className="w-5 h-5" />
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-bold">{tPrayer('audioAlertsPaused', language)}</span>
+                                    <span className="text-xs opacity-80">{tPrayer('untilDate', language)}{new Date(config.audioMutedUntil!).toLocaleDateString(language === 'en' ? 'en-US' : 'ar-SA')}</span>
                                 </div>
                             </div>
-                            <div className="absolute -left-6 -bottom-6 w-16 h-16 bg-white opacity-10 rounded-full blur-2xl"></div>
+                            <button 
+                                onClick={() => updateConfig({ audioMutedUntil: undefined })}
+                                className="text-xs bg-red-200 dark:bg-red-800 text-red-700 dark:text-red-300 px-3 py-1.5 rounded-lg font-bold"
+                            >
+                                {tPrayer('enable', language)}
+                            </button>
+                        </div>
+                    )}
+                    
+                    {(() => {
+                        const maghribOffset = (config.prayerOffsets.Maghrib || 0) + (isSummerTimeActive ? 60 : 0);
+                        const fajrOffset = (config.prayerOffsets.Fajr || 0) + (isSummerTimeActive ? 60 : 0);
+                        const maghribTime = applyOffset(times.Maghrib, maghribOffset);
+                        const fajrTime = applyOffset(times.Fajr, fajrOffset);
+                        const nightTimes = calculateNightTimes(maghribTime, fajrTime);
+
+                        return (
+                            <NextPrayerCard 
+                                nextPrayer={nextPrayer}
+                                times={times}
+                                countdown={countdown}
+                                isBlackAndWhite={isBlackAndWhite}
+                                isDefaultTheme={isDefaultTheme}
+                                isBlackTheme={isBlackTheme}
+                                isDarkTheme={theme.isDark}
+                                themeCardBg={theme.cardBg}
+                                themeTextColor={isBlackTheme ? '#FFFFFF' : (theme.isDark ? theme.textColor : primaryColor)}
+                                themePalette0={theme.palette[0]}
+                                themePalette1={theme.palette[1]}
+                                cardBorderColor={cardBorderColor}
+                                nextPrayerBorderColor={nextPrayerCardBorderColor}
+                                formatTime12={formatTime12}
+                                applyOffset={applyOffset}
+                                prayerOffset={nextPrayer ? (config.prayerOffsets[nextPrayer.key] || 0) + (isSummerTimeActive ? 60 : 0) : 0}
+                                nightTimes={nightTimes}
+                                nightNotifications={config.nightNotifications}
+                                onToggleNightNotification={(key) => {
+                                    const currentNotifs = config.nightNotifications || { firstThird: true, midnight: true, lastThird: true };
+                                    updateConfig({
+                                        nightNotifications: {
+                                            ...currentNotifs,
+                                            [key]: !currentNotifs[key]
+                                        }
+                                    });
+                                }}
+                            />
+                        );
+                    })()}
+
+                    {/* Live active notification banner if currently active during prayer */}
+                    {isPrayerSilentActive && (
+                        <div className="p-2.5 px-3.5 mt-2 rounded-2xl bg-purple-100 dark:bg-purple-900/40 border border-purple-300 dark:border-purple-700 text-purple-900 dark:text-purple-100 flex items-center justify-between text-xs font-bold">
+                            <div className="flex items-center gap-2">
+                                <span className="text-base">🔕</span>
+                                <span>{tPrayer('silentModeActive', language, { p: getPrayerDisplayName(activeSilentPrayerName, language) })}</span>
+                            </div>
+                            <span className="text-[10px] opacity-75 font-normal">{tPrayer('mayAllahAccept', language)}</span>
                         </div>
                     )}
 
-                    <div className="space-y-3 mt-5">
+                    <div id="prayer-list" className="grid grid-cols-2 gap-2 mt-2">
                         {['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].map((key, idx) => {
-                             const displayTimeStr = applyOffset(times[key], config.prayerOffsets[key]);
+                             const totalOffset = (config.prayerOffsets[key] || 0) + (isSummerTimeActive ? 60 : 0);
+                             const displayTimeStr = applyOffset(times[key], totalOffset);
                              const iqamaTime = applyOffset(displayTimeStr, config.iqamaOffsets[key]);
-                             const isMuted = config.mutedPrayers[key];
+                             const isMuted = config.mutedPrayers[key] || isAudioMuted;
                              
                             return (
-                                <div key={key} className="prayer-card rounded-2xl px-4 flex items-center justify-between mb-3 themed-card" style={{borderColor: nextPrayer?.key === key ? primaryColor : 'var(--card-border)', borderWidth: nextPrayer?.key === key ? '2px' : '1px'}}>
-                                    <div className="flex items-center gap-3">
-                                        {key !== 'Sunrise' ? (
-                                            <div className="flex flex-col items-center gap-2">
-                                                <div onClick={() => togglePrayerSound(key)} className={`toggle-dot ${isMuted ? 'bg-red-500' : 'bg-green-500'}`} style={{borderColor: primaryColor}}></div>
-                                                <button onClick={() => openSettings(key)} className="settings-btn shadow-sm hover:opacity-80" style={{ color: primaryColor }}><i className="fa-solid fa-sliders"></i></button>
-                                            </div>
-                                        ) : <div className="w-12"></div>}
-                                        <div className="w-10 h-10 rounded-2xl themed-bg-alt flex items-center justify-center border" style={{color: idx % 2 === 0 ? primaryColor : secondaryColor, borderColor: 'var(--card-border)'}}>
-                                             <i className={`fa-regular ${key === 'Sunrise' ? 'fa-sun' : 'fa-moon'} text-xl`}></i>
-                                        </div>
-                                         <div className="flex flex-col">
-                                            <h3 className="font-bold text-sm leading-none mb-1.5" style={{ color: primaryColor }}>{prayerNamesAr[key]}</h3>
-                                            {key !== 'Sunrise' && iqamaTime && !iqamaTime.includes('--') && (
-                                                <span className="text-[9px] font-black px-2 py-0.5 rounded-full border" style={{color: secondaryColor, backgroundColor: isBlackAndWhite ? '#333' : theme.palette[1] + '1A', borderColor: isBlackAndWhite ? '#FFF' : theme.palette[1] + '33'}}>إقامة {formatTime12_clean(iqamaTime)}</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="text-left flex flex-col items-end">
-                                        <span style={{ color: primaryColor }} dangerouslySetInnerHTML={{ __html: formatTime12(displayTimeStr) }}></span>
-                                    </div>
-                                </div>
+                                    <PrayerCard
+                                        key={key}
+                                        prayerKey={key}
+                                        idx={idx}
+                                        displayTimeStr={displayTimeStr}
+                                        iqamaTime={iqamaTime}
+                                        isMuted={isMuted}
+                                        isNextPrayer={nextPrayer?.key === key}
+                                        prayerNameAr={prayerNamesAr[key]}
+                                        primaryColor={primaryColor}
+                                        secondaryColor={secondaryColor}
+                                        isBlackAndWhite={isBlackAndWhite}
+                                        isDefaultTheme={isDefaultTheme}
+                                        isBlackTheme={isBlackTheme}
+                                        themePalette1={theme.palette[1]}
+                                        cardBorderColor={cardBorderColor}
+                                        nextPrayerBorderColor={nextPrayerBorderColor}
+                                        togglePrayerSound={togglePrayerSound}
+                                        openSettings={openSettings}
+                                        formatTime12={formatTime12}
+                                        formatTime12_clean={formatTime12_clean}
+                                        isSummerTime={isSummerTimeActive}
+                                        toggleSummerTime={toggleSummerTime}
+                                        supportsDST={supportsDST}
+                                />
                             )
                         })}
                     </div>
                     
-                    <p className="text-center text-sm mt-6 opacity-70" style={{ color: secondaryColor }}>
-                        (يجب تفعيل الموقع للهاتف لحساب الموقع بدقه)
+                    <p className="text-center text-sm mt-3 opacity-90" style={{ color: isBlackTheme ? '#FFFFFF' : secondaryColor }}>
+                        {tPrayer('locationRequirementNote', language)}
                     </p>
                 </div>
+                <div className="w-full h-12 shrink-0"></div>
             </main>
 
-             {isModalOpen && currentEditingKey && (
-                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-6 scale-in">
-                    <div className="rounded-[2.5rem] w-full max-w-xs p-6 shadow-2xl" style={{ backgroundColor: 'var(--modal-bg)', color: 'var(--modal-text)' }}>
-                         <div className="flex justify-between items-center mb-6 pb-2 border-b" style={{ borderColor: 'var(--card-border)' }}>
-                            <h3 className="font-black text-sm" style={{ color: primaryColor }}>إعدادات صلاة {prayerNamesAr[currentEditingKey]}</h3>
-                            <button onClick={closeModal} className="hover:text-red-500" style={{ color: secondaryColor }}><i className="fa-solid fa-circle-xmark text-2xl"></i></button>
-                        </div>
-                        <div className="space-y-6">
-                             <div>
-                                <label className="block text-[10px] font-black mb-3 uppercase tracking-widest text-center" style={{ color: secondaryColor }}>تعديل وقت الأذان (بالدقائق)</label>
-                                <div className="flex items-center justify-between themed-bg-alt p-2 rounded-2xl border themed-card-border shadow-inner">
-                                    <button onClick={() => setTempOffset(p => p - 1)} className="control-btn text-red-500 shadow-sm"><i className="fa-solid fa-minus"></i></button>
-                                    <div className="text-center">
-                                        <div className="text-lg font-black en-digits" style={{ color: primaryColor }}>{formatTime12_EN(applyOffset(times[currentEditingKey], tempOffset))}</div>
-                                        <div className="text-[10px] font-bold mt-0.5 en-digits" style={{color: secondaryColor}}>{tempOffset > 0 ? "+" : ""}{tempOffset} min</div>
-                                    </div>
-                                    <button onClick={() => setTempOffset(p => p + 1)} className="control-btn shadow-sm" style={{color: primaryColor}}><i className="fa-solid fa-plus"></i></button>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-black mb-3 uppercase tracking-widest text-center" style={{ color: secondaryColor }}>تنبيه الإقامة (بالدقائق)</label>
-                                <div className="flex items-center justify-between themed-bg-alt p-2 rounded-2xl border themed-card-border shadow-inner">
-                                    <button onClick={() => setTempIqama(p => Math.max(0, p - 1))} className="control-btn text-red-500 shadow-sm"><i className="fa-solid fa-minus"></i></button>
-                                    <div className="text-center">
-                                        <div className="text-lg font-black en-digits" style={{ color: primaryColor }}>{tempIqama}</div>
-                                        <div className="text-[10px] font-bold mt-0.5 uppercase tracking-tighter" style={{color: secondaryColor}}>min</div>
-                                    </div>
-                                    <button onClick={() => setTempIqama(p => p + 1)} className="control-btn shadow-sm" style={{color: primaryColor}}><i className="fa-solid fa-plus"></i></button>
-                                </div>
-                            </div>
-                            {renderToneSelector()}
-                        </div>
-                        <button onClick={saveUserConfig} className="w-full mt-8 text-white py-4 rounded-2xl font-black text-sm shadow-lg active:scale-95 transition-all" style={{backgroundColor: primaryColor, color: isBlackAndWhite ? '#000' : '#FFF'}}>حفظ التغييرات</button>
-                    </div>
-                </div>
+            <PrayerTimesSettingsModal 
+                isOpen={isModalOpen}
+                currentEditingKey={currentEditingKey}
+                prayerNamesAr={prayerNamesAr}
+                primaryColor={primaryColor}
+                secondaryColor={secondaryColor}
+                isBlackAndWhite={isBlackAndWhite}
+                isBlackTheme={isBlackTheme}
+                cardBorderColor={cardBorderColor}
+                isDefaultTheme={isDefaultTheme}
+                closeModal={closeModal}
+                tempOffset={tempOffset}
+                setTempOffset={setTempOffset}
+                tempIqama={tempIqama}
+                setTempIqama={setTempIqama}
+                tempIqamaEnabled={tempIqamaEnabled}
+                setTempIqamaEnabled={setTempIqamaEnabled}
+                times={times}
+                formatTime12_EN={formatTime12_EN}
+                applyOffset={applyOffset}
+                configTones={config.tones}
+                internetTones={internetTones}
+                handleToneSelection={handleToneSelection}
+                handleToneUpload={handleToneUpload}
+                saveUserConfig={saveUserConfig}
+                isSummerTime={isSummerTimeActive}
+                isGlobalPreReminderActive={config.preAthanReminder?.enabled !== false}
+                globalPreReminderMinutes={config.preAthanReminder?.minutes || 15}
+                tempPreReminderEnabled={tempPreReminderEnabled}
+                setTempPreReminderEnabled={setTempPreReminderEnabled}
+                tempPreReminderMinutes={tempPreReminderMinutes}
+                setTempPreReminderMinutes={setTempPreReminderMinutes}
+                isGlobalAutoSilentActive={!!config.autoSilent}
+                globalAutoSilentDuration={config.autoSilentDuration || 15}
+                tempAutoSilentEnabled={tempAutoSilentEnabled}
+                setTempAutoSilentEnabled={setTempAutoSilentEnabled}
+                tempAutoSilentDuration={tempAutoSilentDuration}
+                setTempAutoSilentDuration={setTempAutoSilentDuration}
+            />
+
+            {isNotifModalOpen && (
+                <NotificationSettingsModal 
+                    onClose={() => setIsNotifModalOpen(false)}
+                    showToast={showToast}
+                    isLandscape={false}
+                    modeSuffix="_prayer_times"
+                    initialTab="phone"
+                    hideAppTab={true}
+                    phoneTabTitle={language === 'en' ? 'Prayer Settings & Notifications' : 'إعدادات الصلاة والإشعارات'}
+                />
             )}
+
             {toastMessage && (
-                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg z-[100]">
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg z-[100]">
                     {toastMessage}
                 </div>
             )}
-            <BottomBar onHomeClick={onBack} onThemesClick={() => {}} showThemes={false} />
+
+            <CommunitySpotlightGuide
+                guideKey="prayer_times_page_spotlight"
+                steps={PRAYER_TIMES_PAGE_STEPS}
+                isOpen={showGuide}
+                onClose={() => setShowGuide(false)}
+                isEn={language === 'en'}
+            />
         </div>
     );
 }

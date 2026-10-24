@@ -1,7 +1,7 @@
 
 import {
     QuranIcon, SalahAdhkarIcon, ListenIcon, TasbeehIcon, CalendarIcon, QiblaIcon,
-    HajjIcon, HisnMuslimIcon, PrayerTimesIcon, AdiaIcon, SabahMasaaIcon, RadioIcon, CalculatorIcon
+    HajjIcon, HisnMuslimIcon, PrayerTimesIcon, AdiaIcon, SabahMasaaIcon, CalculatorIcon, TajweedIcon, HabitTrackerIcon
 } from '../components/Icons';
 
 export const verses = [
@@ -17,10 +17,10 @@ export const verses = [
 
 export const navItems = [
   { id: 'quran', title: "القرآن الكريم", icon: QuranIcon, isFeatured: true },
+  { id: 'habit-tracker', title: "مربّي العبادات", icon: HabitTrackerIcon },
   { id: 'sabah-masaa', title: "أذكار الصباح والمساء", icon: SabahMasaaIcon },
-  { id: 'adia', title: "أدعية", icon: AdiaIcon },
+  { id: 'adia', title: "الأدعية المأثورة", icon: AdiaIcon },
   { id: 'tasbeeh', title: "التسبيح", icon: TasbeehIcon },
-  { id: 'radio', title: "إذاعة القرآن", icon: RadioIcon },
   { id: 'calculators', title: "الحاسبة الشرعية", icon: CalculatorIcon },
   { id: 'salah-adhkar', title: "أذكار الصلاة", icon: SalahAdhkarIcon },
   { id: 'prayer-times', title: "مواقيت الصلاة", icon: PrayerTimesIcon },
@@ -29,5 +29,9 @@ export const navItems = [
   { id: 'hisn-muslim', title: "حصن المسلم", icon: HisnMuslimIcon },
   { id: 'listen', title: "الاستماع للقرآن", icon: ListenIcon },
   { id: 'calendar', title: "التقويم", icon: CalendarIcon },
-  { id: 'nawawi', title: 'الأربعون النووية', icon: HisnMuslimIcon }
+  { id: 'nawawi', title: 'الأربعون النووية', icon: HisnMuslimIcon },
+  { id: 'tajweed-education', title: 'تعليم التجويد', icon: TajweedIcon },
+  { id: 'prophetic-seerah', title: 'السيرة النبوية', icon: HisnMuslimIcon },
+  { id: 'ten-promised', title: 'العشرة المبشرون', icon: HisnMuslimIcon }
 ];
+

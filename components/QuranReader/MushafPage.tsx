@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { SAJDAH_LOCATIONS, toArabic, SURAH_INFO } from './constants';
+import { SAJDAH_LOCATIONS, toArabic, SURAH_INFO, getAyahCountText, SURAH_NAMES_AR } from './constants';
+import SurahHeader from './SurahHeader';
 
 interface MushafPageProps {
     pageNum: number;
@@ -11,45 +12,48 @@ interface MushafPageProps {
     onAyahLongPress?: (surah: number, ayah: number, x: number, y: number) => void;
     onInteractionStart?: () => void;
     onInteractionEnd?: () => void;
+    onSurahHeaderLongPress?: () => void;
     settings?: {
         fontSize: number;
         fontFamily: string;
         textColor: string;
         theme: string;
+        surahHeaderDesign?: number;
+        isBold?: boolean;
     };
+    currentTheme?: any;
+    hideVerses?: boolean;
+    memorizationSettings?: any;
+    isPlaying?: boolean;
+    isRecording?: boolean;
+    revealedAyahs?: string[];
+    tempRevealedAyah?: string | null;
 }
 
-const renderTajweedText = (text: string) => {
+export const fixQuranText = (text: string) => {
     if (!text) return text;
-    
-    // Fix for disconnected characters like Small High Ya (U+06E6) and Small High Waw (U+06E5)
-    // We wrap them with Zero Width Joiner (U+200D) to force connection with surrounding letters.
-    const fixedText = text.replace(/([\u06E5\u06E6])/g, '\u200D$1\u200D');
-
-    if (!fixedText.includes('[')) return fixedText;
-    
-    const parts = [];
-    let lastIndex = 0;
-    const regex = /\[([a-z])(?::\d+)?\[([^\]]+)\]/g;
-    let match;
-    
-    while ((match = regex.exec(fixedText)) !== null) {
-        if (match.index > lastIndex) {
-            parts.push(<span key={`text-${lastIndex}`}>{fixedText.substring(lastIndex, match.index)}</span>);
-        }
-        const colorClass = `tajweed-${match[1]}`;
-        parts.push(<span key={`tag-${match.index}`} className={colorClass}>{match[2]}</span>);
-        lastIndex = regex.lastIndex;
-    }
-    
-    if (lastIndex < fixedText.length) {
-        parts.push(<span key={`text-${lastIndex}`}>{fixedText.substring(lastIndex)}</span>);
-    }
-    
-    return parts;
+    return text.replace(/[۞۩]/g, '');
 };
 
-const MushafPage: React.FC<MushafPageProps> = React.memo(({ pageNum, pageData, highlightedAyahId, onAyahClick, onVerseClick, onVerseLongPress, onAyahLongPress, onInteractionStart, onInteractionEnd, settings }) => {
+/**
+ * Regex Cleaner: Removes hidden characters that break Arabic shaping
+ * like Tatweel (\u0640) and Zero Width Joiner (\u200D).
+ */
+export const cleanArabicText = (text: string) => {
+    if (!text) return text;
+    return text.replace(/[\u0640\u200D]/g, '');
+};
+
+/**
+ * Renders Tajweed text as an HTML string to be used with dangerouslySetInnerHTML.
+ * This ensures that no extra spaces are added between spans, which would break Arabic shaping.
+ */
+export const renderTajweedTextHtml = (text: string) => {
+    if (!text) return text;
+    return fixQuranText(text);
+};
+
+const MushafPage: React.FC<MushafPageProps> = React.memo(({ pageNum, pageData, highlightedAyahId, onAyahClick, onVerseClick, onVerseLongPress, onAyahLongPress, onInteractionStart, onInteractionEnd, onSurahHeaderLongPress, settings, currentTheme, hideVerses, memorizationSettings, isPlaying, isRecording, revealedAyahs = [], tempRevealedAyah }) => {
     const pageRef = useRef<HTMLDivElement | null>(null);
     const longPressTimer = useRef<number | null>(null);
     const isLongPressTriggered = useRef(false);
@@ -116,17 +120,52 @@ const MushafPage: React.FC<MushafPageProps> = React.memo(({ pageNum, pageData, h
     
     const pageStyle = {
         fontSize: settings ? `${settings.fontSize}rem` : '1.7rem',
-        fontFamily: settings?.fontFamily || 'var(--font-amiri)',
-        color: settings?.theme === 'dark' ? '#fff' : (settings?.textColor || '#000')
+        fontWeight: settings?.isBold ? '900' : 'normal',
+        WebkitTextStroke: settings?.isBold ? '0.5px currentColor' : '0px',
+        fontFamily: 'var(--qr-fontFamily)',
+        color: 'var(--qr-text)',
+        letterSpacing: 0,
+        fontFeatureSettings: '"kern", "liga", "clig", "calt", "ccmp"',
+        textRendering: 'optimizeLegibility' as const
     };
 
     const headerStyle = {
         fontSize: settings ? `${settings.fontSize * 0.94}rem` : '1.6rem',
-        fontFamily: settings?.fontFamily || 'var(--font-amiri)'
+        fontFamily: settings?.fontFamily || 'var(--font-amiri-quran)',
+        fontWeight: settings?.isBold ? '900' : 'normal',
+        WebkitTextStroke: settings?.isBold ? '0.5px currentColor' : '0px',
+        color: currentTheme?.accent || '#6d28d9'
     };
 
+    const borderColor = currentTheme?.palette?.[0] || currentTheme?.accent || '#d97706';
+    
+    // Use contrasting colors for page numbers as requested
+    // If theme is blue-ish, use purple/orange. If green, use blue/red.
+    const getContrastingColors = () => {
+        const themeId = currentTheme?.id || 'black';
+        const bracketColor = currentTheme?.verseBracket || currentTheme?.sajdah || '#9333ea';
+        const numColor = currentTheme?.accent || currentTheme?.sajdah || '#9333ea';
+        
+        switch(themeId) {
+            case 'black': return { num: '#000000', bracket: '#d97706' };
+            case 'night_sky': return { num: '#9333ea', bracket: '#9333ea' }; // Purple for both
+            case 'green': return { num: '#dc2626', bracket: '#dc2626' }; // Red for both
+            case 'red': return { num: '#2563eb', bracket: '#2563eb' }; // Blue for both
+            case 'deep_black': return { num: '#10B981', bracket: '#10B981' }; // Turquoise Green for both
+            default: return { 
+                num: numColor, 
+                bracket: bracketColor 
+            };
+        }
+    };
+
+    const { num: pageNumColor, bracket: bracketColor } = getContrastingColors();
+
     return (
-        <div className={`mushaf-page ${pageNum === 1 ? 'first-page' : ''}`} data-page={pageNum} ref={pageRef} style={{ backgroundColor: 'transparent' }}>
+        <div id={`page-${pageNum}`} className={`mushaf-page ${pageNum === 1 ? 'first-page' : ''}`} data-page={pageNum} ref={pageRef} style={{ 
+            backgroundColor: 'transparent',
+            boxSizing: 'border-box'
+        }}>
             <div className="page-content" style={pageStyle}>
                 {pageData.map((ayah, index) => {
                     const isSajdah = SAJDAH_LOCATIONS.some(sl => sl.s === ayah.sNum && sl.a === ayah.numberInSurah);
@@ -135,48 +174,87 @@ const MushafPage: React.FC<MushafPageProps> = React.memo(({ pageNum, pageData, h
                     
                     // Detect Hizb Quarter change
                     const prevAyah = index > 0 ? pageData[index - 1] : null;
-                    const isNewQuarter = prevAyah ? (ayah.hizbQuarter !== prevAyah.hizbQuarter) : false;
-                    // Note: For the first ayah of the page, we might miss the marker if it changed between pages.
-                    // But usually markers are at the start of pages or handled by the reader.
-                    // We can also check if (ayah.hizbQuarter - 1) * some_logic matches.
+                    const hasMarkerInText = ayah.text.includes('۞');
+                    const isNewQuarter = (prevAyah ? (ayah.hizbQuarter !== prevAyah.hizbQuarter) : false) || hasMarkerInText;
                     
-                    const text = (ayah.numberInSurah === 1 && ayah.sNum !== 1 && ayah.sNum !== 9) 
+                    const text = fixQuranText((ayah.numberInSurah === 1 && ayah.sNum !== 1 && ayah.sNum !== 9) 
                         ? ayah.text.replace('بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ', '').replace('بِّسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ', '').trim() 
-                        : ayah.text;
+                        : ayah.text);
                     
                     const id = `ayah-${ayah.sNum}-${ayah.numberInSurah}`;
+
+                    // Determine if this ayah should be hidden
+                    let shouldHide = hideVerses && highlightedAyahId !== id;
+                    
+                    // If in memorization review mode, only hide if it's within the review range
+                    if (memorizationSettings?.isReviewMode) {
+                        const s = ayah.sNum;
+                        const a = ayah.numberInSurah;
+                        const { fromSurah, fromAyah, toSurah, toAyah } = memorizationSettings;
+                        
+                        const isBefore = s < fromSurah || (s === fromSurah && a < fromAyah);
+                        const isAfter = s > toSurah || (s === toSurah && a > toAyah);
+                        const isInRange = !isBefore && !isAfter;
+                        
+                        const isHighlighted = highlightedAyahId === id;
+                        const ayahKey = `${s}-${a}`;
+                        const isRevealed = revealedAyahs.includes(ayahKey) || tempRevealedAyah === ayahKey;
+
+                        if (isInRange) {
+                            if (isRevealed) {
+                                shouldHide = false; // Show if revealed or hint
+                            } else if (isRecording && tempRevealedAyah !== ayahKey) {
+                                shouldHide = true; // Hide others during recording, unless it's the temp revealed one
+                            } else if (isPlaying && isHighlighted) {
+                                shouldHide = false; // Show only the playing verse
+                            } else {
+                                shouldHide = true; // Hide otherwise
+                            }
+                        } else {
+                            shouldHide = false; // Don't hide verses outside the review range
+                        }
+                    } else if (shouldHide && memorizationSettings) {
+                        // Normal memorization mode logic (hide only within range)
+                        const s = ayah.sNum;
+                        const a = ayah.numberInSurah;
+                        const { fromSurah, fromAyah, toSurah, toAyah } = memorizationSettings;
+                        
+                        const isBefore = s < fromSurah || (s === fromSurah && a < fromAyah);
+                        const isAfter = s > toSurah || (s === toSurah && a > toAyah);
+                        
+                        if (isBefore || isAfter) {
+                            shouldHide = false;
+                        }
+                    }
+
+                    const isDarkGroup = currentTheme?.id === 'deep_black' || currentTheme?.id?.startsWith('i_');
+                    const headerBg = currentTheme?.headerBg || '#22c55e';
+                    const headerBorder = isDarkGroup ? '#ffffff' : (currentTheme?.accent || '#14532d');
+                    const headerText = currentTheme?.headerText || '#ffffff';
+                    const cartoucheBg = currentTheme?.bg || '#dcfce7';
+                    const cartoucheText = isDarkGroup ? '#ffffff' : (currentTheme?.accent || '#14532d');
 
                     return (
                         <React.Fragment key={id}>
                             {showHeader && ( 
-                                <> 
-                                    <div className="surah-header-container">
-                                        <svg className="surah-header-bg" viewBox="0 0 600 80" preserveAspectRatio="none">
-                                            {/* Outer Green Box with Double Border */}
-                                            <rect x="2" y="2" width="596" height="76" fill="#22c55e" stroke="#14532d" strokeWidth="2" />
-                                            <rect x="6" y="6" width="588" height="68" fill="none" stroke="#dcfce7" strokeWidth="1" opacity="0.5" />
-                                            
-                                            {/* Center Cartouche Background (Light) - Shrunken Width */}
-                                            <path d="M 180 10 L 420 10 Q 440 10 445 25 L 450 40 L 445 55 Q 440 70 420 70 L 180 70 Q 160 70 155 55 L 150 40 L 155 25 Q 160 10 180 10 Z" fill="#dcfce7" stroke="#14532d" strokeWidth="2" />
-                                            
-                                            {/* Inner decorative line for cartouche - Shrunken Width */}
-                                            <path d="M 185 15 L 415 15 Q 430 15 434 25 L 438 40 L 434 55 Q 430 65 415 65 L 185 65 Q 170 65 166 55 L 162 40 L 166 25 Q 170 15 185 15 Z" fill="none" stroke="#14532d" strokeWidth="1" opacity="0.5" />
-                                        </svg>
-                                        
-                                        <div className="surah-header-content">
-                                            <div className="surah-header-right-text">{SURAH_INFO[ayah.sNum]?.type}</div>
-                                            <div className="surah-header-center-text">{ayah.sName.replace('سورة', '').trim()}</div>
-                                            <div className="surah-header-left-text">{toArabic(SURAH_INFO[ayah.sNum]?.ayahs || 0)} آيات</div>
-                                        </div>
-                                    </div> 
+                                <div className="surah-header-container-wrapper my-2 sm:my-3 block w-full select-none" onClick={() => onSurahHeaderLongPress && onSurahHeaderLongPress()}> 
+                                    <SurahHeader 
+                                        surahNumber={ayah.sNum}
+                                        surahName={ayah.sName ? ayah.sName.replace(/سورة|سُورَةُ|سُورَة/g, '').trim() : (SURAH_NAMES_AR[ayah.sNum - 1] || '')}
+                                        surahType={SURAH_INFO[ayah.sNum]?.type || 'مكية'}
+                                        ayahCount={SURAH_INFO[ayah.sNum]?.ayahs || 7}
+                                        currentTheme={currentTheme}
+                                        design={settings?.surahHeaderDesign || 1}
+                                        onLongPress={onSurahHeaderLongPress}
+                                    />
                                     {ayah.sNum !== 1 && ayah.sNum !== 9 && (
                                         <div className="bismillah" style={headerStyle}>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
                                     )} 
-                                </> 
+                                 </div> 
                             )}
                             <span 
                                 id={id} 
-                                className={`ayah-text-block ${highlightedAyahId === id ? 'highlighted' : ''} ${isSajdah ? 'ayah-sajdah' : ''}`} 
+                                className={`ayah-text-block ${highlightedAyahId === id ? 'highlighted' : ''} ${isSajdah ? 'ayah-sajdah' : ''} ${shouldHide ? 'hide-text' : ''}`} 
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     if (!isLongPressTriggered.current) {
@@ -191,13 +269,18 @@ const MushafPage: React.FC<MushafPageProps> = React.memo(({ pageNum, pageData, h
                                 onContextMenu={(e) => e.preventDefault()}
                                 data-sajdah={isSajdah} 
                                 data-snum={ayah.sNum}
-                                data-surah={ayah.sName.replace('سورة','').trim()} 
+                                data-surah={ayah.sName.trim()} 
                                 data-ayah={ayah.numberInSurah}
                                 data-juz={ayah.juz}
                                 data-hizb-quarter={ayah.hizbQuarter}
                             >
                                 {isNewQuarter && <span className="hizb-quarter-marker">۞</span>}
-                                {renderTajweedText(text.replace(/\s+/g, ' ').trim())}
+                                <span 
+                                    style={{ display: 'contents' }}
+                                    dangerouslySetInnerHTML={{ 
+                                        __html: renderTajweedTextHtml(text.replace(/\s+/g, ' ').trim()) 
+                                    }} 
+                                />
                                 {isSajdah && <span className="sajdah-icon-inline">۩</span>}
                                 <span className="verse-container" 
                                     onClick={(e) => {
@@ -224,19 +307,22 @@ const MushafPage: React.FC<MushafPageProps> = React.memo(({ pageNum, pageData, h
                                         e.stopPropagation();
                                     }}
                                 >
-                                    <span className="verse-bracket">﴿</span>
-                                    <span className="verse-num-inner">{toArabic(ayah.numberInSurah)}</span>
-                                    <span className="verse-bracket">﴾</span>
+                                    <span className="verse-bracket" style={{ color: currentTheme?.verseBracket || currentTheme?.accent || '#d97706' }}>﴿</span>
+                                    <span className="verse-num-inner" style={{ color: currentTheme?.accent || '#1d4ed8' }}>{toArabic(ayah.numberInSurah)}</span>
+                                    <span className="verse-bracket" style={{ color: currentTheme?.verseBracket || currentTheme?.accent || '#d97706' }}>﴾</span>
                                 </span>
                             </span>
                         </React.Fragment>
                     );
                 })}
             </div>
-            <div className="page-footer">
-                <span className="page-number-bracket">﴿</span>
-                <span className="page-number-text">{toArabic(pageNum)}</span>
-                <span className="page-number-bracket">﴾</span>
+            <div className="page-footer" style={{ flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <span className="page-number-bracket" style={{ color: bracketColor }}>﴿</span>
+                    <span className="page-number-text" style={{ color: pageNumColor }}>{toArabic(pageNum)}</span>
+                    <span className="page-number-bracket" style={{ color: bracketColor }}>﴾</span>
+                </div>
+                <div style={{ width: '60%', height: '2.5px', backgroundColor: bracketColor, marginTop: '12px', opacity: 0.8, borderRadius: '2px' }}></div>
             </div>
         </div>
     );

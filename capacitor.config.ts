@@ -1,19 +1,29 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
-const config: CapacitorConfig = {
+const config: any = {
   appId: 'com.mushaf.ahmedandlayla',
   appName: 'مصحف أحمد وليلى',
   webDir: 'dist',
+  backgroundColor: '#000000',
   server: {
-    androidScheme: 'https'
+    androidScheme: 'https',
+    allowNavigation: [
+      '*.google.com',
+      'accounts.google.com',
+      'ssl.gstatic.com'
+    ]
   },
   plugins: {
+    Keyboard: {
+      resize: 'native' as any,
+      style: 'dark' as any,
+    },
     LocalNotifications: {
-      smallIcon: "ic_stat_icon_config_sample",
+      smallIcon: "ic_stat_name",
       iconColor: "#488AFF",
-      sound: "beep.wav",
+      sound: "chime.mp3",
     },
   },
 };
 
-export default config;
+export default config as CapacitorConfig;

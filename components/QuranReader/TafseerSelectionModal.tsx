@@ -1,5 +1,7 @@
 import React, { FC } from 'react';
-import { TAFSEERS } from './constants';
+import { TAFSEERS, getTafseerDisplayName } from './constants';
+import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const TafseerSelectionModal: FC<{
     isOpen: boolean,
@@ -8,23 +10,30 @@ const TafseerSelectionModal: FC<{
     currentTafseerId: string,
     isLandscape?: boolean
 }> = ({ isOpen, onClose, onSelect, currentTafseerId, isLandscape }) => {
+    const { theme } = useTheme();
+    const { language, dir } = useLanguage();
     if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 z-[300] bg-black/30 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
-            <div className={`modal-skinned w-full ${isLandscape ? 'max-w-4xl' : 'max-w-sm sm:max-w-2xl'} rounded-2xl shadow-2xl flex flex-col max-h-[80vh]`} onClick={e => e.stopPropagation()}>
-                <div className="p-4 theme-header-bg rounded-t-2xl text-center">
-                    <h3 className="font-bold text-lg">اختر التفسير</h3>
-                </div>
-                <div className={`p-2 overflow-y-auto flex-1 grid ${isLandscape ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3' : 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2'}`}>
-                    {TAFSEERS.map(t => (
-                        <button key={t.id} onClick={() => onSelect(t.id)} className={`w-full p-3 rounded-xl text-center font-bold transition flex flex-col justify-center items-center gap-1 ${currentTafseerId === t.id ? 'theme-accent-btn' : 'hover:opacity-80'}`} style={currentTafseerId !== t.id ? { backgroundColor: 'var(--qr-card-bg)', color: 'var(--qr-card-text)', border: '1px solid var(--qr-card-border)' } : {}}>
-                            <span className="text-sm">{t.name}</span>
-                            {currentTafseerId === t.id && <i className="fa-solid fa-check text-xs"></i>}
-                        </button>
-                    ))}
-                </div>
-                <div className="p-3 border-t themed-card-bg rounded-b-2xl">
-                    <button onClick={onClose} className="w-full py-2 rounded-xl font-bold theme-btn-bg">إلغاء</button>
+        <div className={`fixed inset-0 z-[1200] bg-transparent flex items-center justify-center ${isLandscape ? 'p-2' : 'p-4'} animate-fadeIn`} onClick={onClose}>
+            <div dir={dir} className={`modal-skinned w-full ${isLandscape ? 'max-w-[300px] max-h-[90vh] rounded-xl' : 'max-w-[280px] rounded-2xl max-h-[80vh]'} shadow-2xl flex flex-col animate-modal-enter`} 
+                style={{ backgroundColor: 'var(--qr-modal-bg, #FFF)', color: 'var(--qr-modal-text, #000)' }}
+                onClick={e => e.stopPropagation()}>
+                <div className={`${isLandscape ? 'p-2.5 gap-2' : 'p-5 gap-4'} overflow-y-auto flex-1 flex flex-col`}>
+                    {TAFSEERS.map(t => {
+                        const isSelected = currentTafseerId === t.id;
+                        return (
+                            <button key={t.id} onClick={() => onSelect(t.id)} 
+                                className={`w-full ${isLandscape ? 'py-1.5 px-2 text-sm' : 'py-3 px-4 text-lg'} rounded-xl font-bold transition-transform hover:scale-105 flex items-center justify-center gap-2 ${isSelected ? '' : 'hover:opacity-80'}`} 
+                                style={{ 
+                                    backgroundColor: isSelected ? 'color-mix(in srgb, var(--qr-accent) 15%, transparent)' : 'transparent', 
+                                    color: isSelected ? 'var(--qr-accent)' : 'var(--qr-card-text)', 
+                                    border: `2px solid ${isSelected ? 'var(--qr-accent)' : 'var(--qr-card-border)'}` 
+                                }}>
+                                <span>{getTafseerDisplayName(t.id, language as 'ar' | 'en')}</span>
+                                {isSelected && <i className="fa-solid fa-check text-sm" style={{ color: 'var(--qr-accent)' }}></i>}
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
         </div>
