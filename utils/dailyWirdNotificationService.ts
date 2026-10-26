@@ -313,7 +313,9 @@ export const syncDailyWirdNotifications = async (langOverride?: 'ar' | 'en') => 
           playSound: true,
           soundFile: '/assets/audio/chime.mp3'
         },
-        smallIcon: 'ic_stat_name'
+        smallIcon: 'ic_stat_name',
+        group: `standalone_wird_${NOTIFICATION_BASE_ID + dayOffset}`,
+        groupSummary: false
       });
     }
 
@@ -347,21 +349,23 @@ export const triggerTestWirdNotification = async (langOverride?: 'ar' | 'en') =>
   // Play gentle sound
   playNotificationSound('/assets/audio/chime.mp3', true);
 
-  // Dispatch in-app modal alert
-  window.dispatchEvent(new CustomEvent('show-wird-alert', {
-    detail: {
-      profileId: profile?.id || 'demo',
-      profileName: profile?.name || (isEn ? 'Current Khatma' : 'الختمة الحالية'),
-      currentDay: dayNumber,
-      totalDays: profile ? getWirdTotalDays(profile) : 30,
-      startPage: profile ? getWirdDayRange(dayNumber, profile).start : 1,
-      endPage: profile ? getWirdDayRange(dayNumber, profile).end : 20,
-      missedDaysCount: 0,
-      title: content.title,
-      message: content.body,
-      soundFileName: 'chime.mp3'
-    }
-  }));
+  // Dispatch in-app modal alert only on web / browser (never in native APK)
+  if (!Capacitor.isNativePlatform()) {
+    window.dispatchEvent(new CustomEvent('show-wird-alert', {
+      detail: {
+        profileId: profile?.id || 'demo',
+        profileName: profile?.name || (isEn ? 'Current Khatma' : 'الختمة الحالية'),
+        currentDay: dayNumber,
+        totalDays: profile ? getWirdTotalDays(profile) : 30,
+        startPage: profile ? getWirdDayRange(dayNumber, profile).start : 1,
+        endPage: profile ? getWirdDayRange(dayNumber, profile).end : 20,
+        missedDaysCount: 0,
+        title: content.title,
+        message: content.body,
+        soundFileName: 'chime.mp3'
+      }
+    }));
+  }
 
   if (Capacitor.isNativePlatform()) {
     try {
@@ -384,7 +388,9 @@ export const triggerTestWirdNotification = async (langOverride?: 'ar' | 'en') =>
               playSound: true,
               soundFile: '/assets/audio/chime.mp3'
             },
-            smallIcon: 'ic_stat_name'
+            smallIcon: 'ic_stat_name',
+            group: `standalone_wird_test_${TEST_NOTIFICATION_ID}`,
+            groupSummary: false
           }
         ]
       });
@@ -396,8 +402,14 @@ export const triggerTestWirdNotification = async (langOverride?: 'ar' | 'en') =>
 
 /**
  * Checks if the user has an uncompleted wird on app launch/resume and returns alert data if needed
+ * Note: Only active on web/browser platforms. In native APK, reminders are handled via system notifications.
  */
 export const checkWirdAlertOnAppResume = (): WirdAlertData | null => {
+  // Never show in-app popup alerts inside native APK
+  if (Capacitor.isNativePlatform()) {
+    return null;
+  }
+
   try {
     const profile = getActiveWirdProfile();
     if (!profile || !profile.isActive || profile.reminderEnabled === false) {

@@ -395,6 +395,7 @@ export const PRAYER_TIMES_STRINGS: Record<string, { ar: string; en: string }> = 
   customize: { ar: 'تخصيص', en: 'Customize' },
   dstTooltip: { ar: 'التوقيت الصيفي', en: 'Daylight Saving Time' },
   iqamaPrefix: { ar: 'إقامة', en: 'Iqama' },
+  iqama: { ar: 'الإقامة', en: 'Iqama' },
   iqamaButtonTooltip: { ar: 'تخصيص وقت ونغمة الإقامة', en: 'Customize Iqama time and alert' },
 
   // Footer Note

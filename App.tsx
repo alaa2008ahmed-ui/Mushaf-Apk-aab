@@ -3,7 +3,9 @@ import React, { useState, useCallback, useEffect } from 'react';
 import ThemeSelector from './components/ThemesModal';
 import ExitConfirmModal from './components/ExitConfirmModal';
 import AppRouter from './router/AppRouter';
+import WelcomeSplash from './components/WelcomeSplash';
 import VideoSplash from './components/VideoSplash';
+import { useLanguage } from './context/LanguageContext';
 import RateUs from './components/RateUs';
 import { useWakeLock } from './hooks/useWakeLock';
 import { useBackButton } from './hooks/useBackButton';
@@ -20,6 +22,7 @@ import { normalizeArabic } from './utils/voiceParser';
 import { usePrayerTimes } from './context/PrayerTimesContext';
 import { setupNotifications } from './utils/notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { Preferences } from '@capacitor/preferences';
 import { Capacitor } from '@capacitor/core';
 import { clearSearchCache } from './pages/GlobalSearch';
 import { playNotificationSound } from './utils/prayerTimesUtils';
@@ -44,11 +47,21 @@ import {
 // --- Main App Component ---
 function App() {
   const { theme, applyPresetTheme, setCurrentPage } = useTheme();
-  const [showSplash, setShowSplash] = useState(true);
+  const { setLanguage } = useLanguage();
+  const [splashStage, setSplashStage] = useState<'video' | 'welcome' | 'app'>('video');
 
-  // Track app launch count for "جديد" badge (1 count per launch, max 10 times)
+  // Track app launch count for "جديد" badge and sync first-time language preference
   useEffect(() => {
     recordAppLaunch();
+    try {
+      Preferences.get({ key: 'has_selected_initial_language' }).then(({ value }) => {
+        if (value === 'true') {
+          try {
+            localStorage.setItem('has_selected_initial_language', 'true');
+          } catch (e) {}
+        }
+      }).catch(() => {});
+    } catch (e) {}
   }, []);
   const [history, setHistory] = useState(['home']);
   const [navParams, setNavParams] = useState<any>(null);
@@ -275,7 +288,9 @@ function App() {
           window.dispatchEvent(new CustomEvent('show-islamic-occasion-alert', { detail: { occasionId } }));
         } else if (type === 'daily-wird' || page === 'daily-wird') {
           handleNavigate('daily-wird');
-          window.dispatchEvent(new CustomEvent('show-wird-alert', { detail: extra }));
+          if (!Capacitor.isNativePlatform()) {
+            window.dispatchEvent(new CustomEvent('show-wird-alert', { detail: extra }));
+          }
         } else if (page) {
           handleNavigate(page, params);
         } else if (type === 'iqama') {
@@ -289,7 +304,9 @@ function App() {
           playNotificationSound('/assets/audio/chime.mp3', true);
         } else if (extra?.type === 'daily-wird') {
           playNotificationSound('/assets/audio/chime.mp3', true);
-          window.dispatchEvent(new CustomEvent('show-wird-alert', { detail: extra }));
+          if (!Capacitor.isNativePlatform()) {
+            window.dispatchEvent(new CustomEvent('show-wird-alert', { detail: extra }));
+          }
         } else if (extra?.playSound && extra?.soundFile) {
           playNotificationSound(extra.soundFile, true);
         }
@@ -345,6 +362,51 @@ function App() {
       return (prev.length > 1 ? prev.slice(0, -1) : prev);
     });
   }, [navParams]);
+
+  // --- Deep Linking from Android Widgets, Notifications & App Shortcuts ---
+  useEffect(() => {
+    const handleUrl = (url: string) => {
+      if (!url) return;
+      // Skip splash if launched directly via deep link or launcher shortcut
+      setSplashStage('app');
+
+      if (url.includes('prayer-times')) {
+        handleNavigate('prayer-times');
+      } else if (url.includes('prophetic-seerah') || url.includes('seerah')) {
+        handleNavigate('prophetic-seerah');
+      } else if (url.includes('qibla')) {
+        handleNavigate('qibla');
+      } else if (url.includes('quran')) {
+        handleNavigate('quran');
+      } else if (url.includes('hisn-muslim') || url.includes('azkar') || url.includes('athkar')) {
+        handleNavigate('hisn-muslim');
+      } else if (url.includes('tasbeeh')) {
+        handleNavigate('tasbeeh');
+      } else if (url.includes('calendar')) {
+        handleNavigate('calendar');
+      } else if (url.includes('home')) {
+        handleNavigate('home');
+      }
+    };
+
+    if (Capacitor.isNativePlatform()) {
+      CapacitorApp.getLaunchUrl().then(result => {
+        if (result && result.url) {
+          handleUrl(result.url);
+        }
+      }).catch(() => {});
+
+      const sub = CapacitorApp.addListener('appUrlOpen', (data: any) => {
+        if (data && data.url) {
+          handleUrl(data.url);
+        }
+      });
+
+      return () => {
+        sub.then(listener => listener.remove()).catch(() => {});
+      };
+    }
+  }, [handleNavigate]);
 
   const handleVoiceAction = useCallback((action: string, text: string, params?: any) => {
     console.log('Voice Action:', action, text, params);
@@ -421,8 +483,39 @@ function App() {
 
   const page = history[history.length - 1];
 
-  if (showSplash) {
-    return <VideoSplash onEnded={() => setShowSplash(false)} />;
+  if (splashStage === 'video') {
+    return (
+      <VideoSplash
+        onEnded={() => {
+          let hasChosenLanguage = false;
+          try {
+            hasChosenLanguage = localStorage.getItem('has_selected_initial_language') === 'true';
+          } catch (e) {
+            hasChosenLanguage = false;
+          }
+          if (hasChosenLanguage) {
+            setSplashStage('app');
+          } else {
+            setSplashStage('welcome');
+          }
+        }}
+      />
+    );
+  }
+
+  if (splashStage === 'welcome') {
+    return (
+      <WelcomeSplash
+        onSelectLanguage={(lang) => {
+          try {
+            localStorage.setItem('has_selected_initial_language', 'true');
+            Preferences.set({ key: 'has_selected_initial_language', value: 'true' }).catch(() => {});
+          } catch (e) {}
+          setLanguage(lang);
+          setSplashStage('app');
+        }}
+      />
+    );
   }
 
   return (
@@ -472,6 +565,9 @@ function AppContent({
   const [activeWirdAlert, setActiveWirdAlert] = useState<WirdAlertData | null>(null);
 
   useEffect(() => {
+    // Only listen for in-app modal alert on web/browser (never in native APK)
+    if (Capacitor.isNativePlatform()) return;
+
     const handleWirdAlertEvent = (e: any) => {
       const detail = e.detail;
       if (detail) {
@@ -506,8 +602,10 @@ function AppContent({
     return () => window.removeEventListener('show-wird-alert', handleWirdAlertEvent);
   }, []);
 
-  // Check on app launch/resume for uncompleted wird alert
+  // Check on app launch/resume for uncompleted wird alert (browser/web only, never in native APK)
   useEffect(() => {
+    if (Capacitor.isNativePlatform()) return;
+
     const timer = setTimeout(() => {
       const alertData = checkWirdAlertOnAppResume();
       if (alertData) {
@@ -627,7 +725,7 @@ function AppContent({
         />
       )}
 
-      {activeWirdAlert && (
+      {!Capacitor.isNativePlatform() && activeWirdAlert && (
         <WirdAlertModal
           alert={activeWirdAlert}
           onDismiss={() => {

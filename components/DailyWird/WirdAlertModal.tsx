@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { BookOpen, Check, X, Volume2, VolumeX, ArrowLeft, ArrowRight, Sparkles, AlertCircle, Languages } from 'lucide-react';
 import { playNotificationSound, stopNotificationSound } from '../../utils/prayerTimesUtils';
 import { useLanguage } from '../../context/LanguageContext';
@@ -22,7 +23,8 @@ export const WirdAlertModal: React.FC<WirdAlertModalProps> = ({
   const [isPlayingSound, setIsPlayingSound] = useState(true);
 
   useEffect(() => {
-    if (alert) {
+    // Only play sound if on web/browser (never in native APK)
+    if (alert && !Capacitor.isNativePlatform()) {
       // Play gentle chime sound upon alert appearance
       playNotificationSound('/assets/audio/chime.mp3', true);
       setIsPlayingSound(true);
@@ -32,7 +34,8 @@ export const WirdAlertModal: React.FC<WirdAlertModalProps> = ({
     };
   }, [alert]);
 
-  if (!alert) return null;
+  // NEVER render inside native APK
+  if (!alert || Capacitor.isNativePlatform()) return null;
 
   const handleToggleSound = () => {
     if (isPlayingSound) {

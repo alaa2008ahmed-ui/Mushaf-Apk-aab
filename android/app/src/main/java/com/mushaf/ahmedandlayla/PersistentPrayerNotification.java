@@ -13,7 +13,7 @@ import org.json.JSONObject;
 
 public class PersistentPrayerNotification {
 
-    public static final String CHANNEL_ID = "persistent_prayer_channel_v1";
+    public static final String CHANNEL_ID = "persistent_prayer_channel_v2";
     public static final int NOTIFICATION_ID = 9901;
 
     public static void createChannel(Context context) {
@@ -25,14 +25,20 @@ public class PersistentPrayerNotification {
             NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm == null) return;
 
+            try {
+                nm.deleteNotificationChannel("persistent_prayer_channel_v1");
+            } catch (Exception ignored) {}
+
+            // IMPORTANCE_MIN hides the icon from the phone's top status bar
+            // while keeping the notification visible inside the notification shade when pulled down
             NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
                 isArabic ? "إشعار مواقيت الصلاة المستمر" : "Persistent Prayer Notification",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_MIN
             );
             channel.setDescription(isArabic
-                ? "يعرض الصلاة القادمة والوقت المتبقي في شريط الإشعارات وشاشة القفل بدون صوت"
-                : "Displays next prayer and remaining time in notification bar silently");
+                ? "يعرض الصلاة القادمة والوقت المتبقي عند سحب شريط الإشعارات بدون أيقونة في الشريط العلوي"
+                : "Displays next prayer and remaining time in the notification drawer without a status bar icon");
             channel.setShowBadge(false);
             channel.enableVibration(false);
             channel.setSound(null, null);
@@ -190,14 +196,19 @@ public class PersistentPrayerNotification {
                 targetTimeMillis = data.optLong("target_time_millis", 0);
             }
 
-            // Calculate formatted remaining time (e.g. 01:24 or 00:45)
+            // Calculate formatted remaining time with seconds for fallback title
             String remainingFormatted = "";
-            if (targetTimeMillis > now) {
-                long diffMillis = targetTimeMillis - now;
-                long totalMinutes = (diffMillis + 59999) / 60000; // round up to nearest minute
-                long hours = totalMinutes / 60;
-                long minutes = totalMinutes % 60;
-                remainingFormatted = String.format(java.util.Locale.US, "%02d:%02d", hours, minutes);
+            long diffMillis = targetTimeMillis - now;
+            if (targetTimeMillis > now && diffMillis > 0) {
+                long totalSeconds = Math.max(0, (diffMillis + 999) / 1000);
+                long hours = totalSeconds / 3600;
+                long minutes = (totalSeconds % 3600) / 60;
+                long seconds = totalSeconds % 60;
+                if (hours > 0) {
+                    remainingFormatted = String.format(java.util.Locale.US, "%02d:%02d:%02d", hours, minutes, seconds);
+                } else {
+                    remainingFormatted = String.format(java.util.Locale.US, "%02d:%02d", minutes, seconds);
+                }
             }
 
             JSONObject times = data.optJSONObject("times");
@@ -226,10 +237,11 @@ public class PersistentPrayerNotification {
             }
             PendingIntent pendingIntent = PendingIntent.getActivity(context, NOTIFICATION_ID, openAppIntent, flags);
 
-            // Display remaining time directly beside the next prayer name without city
-            String title = (isArabic ? "الصلاة القادمة: " : "Next Prayer: ") + nextPrayerName;
+            // Fallback title for lock screen / auto / wear
+            String prayerLabel = (isArabic ? "الصلاة القادمة: " : "Next Prayer: ") + nextPrayerName;
+            String fallbackTitle = prayerLabel;
             if (!remainingFormatted.isEmpty()) {
-                title += " (" + (isArabic ? "متبقي " : "in ") + remainingFormatted + ")";
+                fallbackTitle += " (" + (isArabic ? "متبقي " : "in ") + remainingFormatted + ")";
             }
 
             // Restore intent: if swiped away while enabled, automatically restore it
@@ -237,38 +249,72 @@ public class PersistentPrayerNotification {
             deleteIntent.setAction(PrayerSilentReceiver.ACTION_RESTORE_NOTIFICATION);
             PendingIntent deletePi = PendingIntent.getBroadcast(context, 9902, deleteIntent, flags);
 
+            // Build RemoteViews for custom content with live second-by-second Chronometer
+            android.widget.RemoteViews collapsedView = new android.widget.RemoteViews(context.getPackageName(), R.layout.notification_persistent_prayer);
+            android.widget.RemoteViews expandedView = new android.widget.RemoteViews(context.getPackageName(), R.layout.notification_persistent_prayer_expanded);
+
+            long chronometerBase = android.os.SystemClock.elapsedRealtime() + Math.max(0, diffMillis);
+            String prefix = " (" + (isArabic ? "متبقي " : "in ");
+            String suffix = ")";
+
+            for (android.widget.RemoteViews rv : new android.widget.RemoteViews[]{collapsedView, expandedView}) {
+                rv.setTextViewText(R.id.notif_next_prayer, prayerLabel);
+
+                if (targetTimeMillis > now && diffMillis > 0) {
+                    rv.setViewVisibility(R.id.notif_remaining_prefix, android.view.View.VISIBLE);
+                    rv.setViewVisibility(R.id.notif_chronometer, android.view.View.VISIBLE);
+                    rv.setViewVisibility(R.id.notif_remaining_suffix, android.view.View.VISIBLE);
+
+                    rv.setTextViewText(R.id.notif_remaining_prefix, prefix);
+                    rv.setTextViewText(R.id.notif_remaining_suffix, suffix);
+
+                    rv.setChronometer(R.id.notif_chronometer, chronometerBase, null, true);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        rv.setChronometerCountDown(R.id.notif_chronometer, true);
+                    }
+                } else {
+                    rv.setViewVisibility(R.id.notif_remaining_prefix, android.view.View.GONE);
+                    rv.setViewVisibility(R.id.notif_chronometer, android.view.View.GONE);
+                    rv.setViewVisibility(R.id.notif_remaining_suffix, android.view.View.GONE);
+                }
+            }
+
+            // Collapsed view: hide summary & small time so the big countdown has full width
+            collapsedView.setViewVisibility(R.id.notif_summary, android.view.View.GONE);
+
+            // Expanded view: show small time, big time, and all prayer times
+            expandedView.setViewVisibility(R.id.notif_summary, android.view.View.VISIBLE);
+            expandedView.setTextViewText(R.id.notif_summary, summary.toString());
+            if (targetTimeMillis > now && diffMillis > 0) {
+                expandedView.setViewVisibility(R.id.notif_chronometer_small, android.view.View.VISIBLE);
+                expandedView.setChronometer(R.id.notif_chronometer_small, chronometerBase, null, true);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    expandedView.setChronometerCountDown(R.id.notif_chronometer_small, true);
+                }
+            } else {
+                expandedView.setViewVisibility(R.id.notif_chronometer_small, android.view.View.GONE);
+            }
+
             NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_name)
-                .setContentTitle(title)
+                .setColor(0xFF2E7D5E)
+                .setContentTitle(fallbackTitle)
                 .setSubText(isArabic ? "مواقيت الصلاة" : "Prayer Times")
                 .setContentIntent(pendingIntent)
                 .setDeleteIntent(deletePi)
                 .setOngoing(true)
                 .setAutoCancel(false)
                 .setOnlyAlertOnce(true)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setShowWhen(false)
+                .setUsesChronometer(false)
+                .setPriority(NotificationCompat.PRIORITY_MIN)
+                .setGroup("standalone_persistent_prayer_" + NOTIFICATION_ID)
+                .setGroupSummary(false)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setContentText(summary.toString());
-
-            // Live Chronometer countdown in notification header
-            if (targetTimeMillis > now) {
-                builder.setWhen(targetTimeMillis);
-                builder.setShowWhen(true);
-                builder.setUsesChronometer(true);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    builder.setChronometerCountDown(true);
-                }
-            } else {
-                builder.setShowWhen(false);
-            }
-
-            if (summary.length() > 0) {
-                builder.setStyle(new NotificationCompat.BigTextStyle()
-                    .setBigContentTitle(title)
-                    .setSummaryText(isArabic ? "مواقيت الصلاة" : "Prayer Times")
-                    .bigText(summary.toString())
-                );
-            }
+                .setContentText(summary.toString())
+                .setCustomContentView(collapsedView)
+                .setCustomBigContentView(expandedView)
+                .setStyle(new NotificationCompat.DecoratedCustomViewStyle());
 
             Notification notification = builder.build();
             // Critical persistence flags: prevents removal via "Clear all" button and marks as persistent

@@ -68,10 +68,14 @@ export const TawafCounterCard: React.FC<TawafCounterCardProps> = ({ theme }) => 
 
   return (
     <div
-      className="w-full mt-2 py-3.5 px-4 sm:px-5 rounded-2xl shadow-lg border-2 relative overflow-hidden flex flex-col gap-3 transition-all duration-300"
+      className={`w-full mt-2 py-3.5 px-4 sm:px-5 rounded-2xl relative overflow-hidden flex flex-col gap-3 transition-all duration-300 ${
+        isBlackTheme ? 'bg-[#18181b] border border-white/10' : 'bg-white'
+      }`}
       style={{
-        borderColor: primaryAccent,
-        backgroundColor: cardBg,
+        borderRadius: '16px',
+        boxShadow: isBlackTheme
+          ? '0 8px 30px -4px rgba(0, 0, 0, 0.7)'
+          : '0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02)',
         fontFamily: theme?.font
       }}
       dir={dir}

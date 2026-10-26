@@ -1588,6 +1588,8 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
     const wasAutoscrollingBeforeAyahContext = useRef(false);
     const wasAutoscrollingBeforeAutoScrollSettings = useRef(false);
     const wasAutoscrollingBeforeFloatingMenu = useRef(false);
+    const wasAutoscrollingBeforeBackground = useRef(false);
+    const isAppBackgroundedRef = useRef(false);
 
     useEffect(() => {
         if (isAutoScrollSettingsOpen) {
@@ -1649,6 +1651,8 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
                           tafseerSelectionInfo.isOpen ||
                           isAutoScrollSettingsOpen ||
                           sajdahCardInfo.show;
+    const isAnyMenuOpenRef = useRef(isAnyMenuOpen);
+    useEffect(() => { isAnyMenuOpenRef.current = isAnyMenuOpen; }, [isAnyMenuOpen]);
 
     const [settings, setSettings] = useState(() => {
         const mode = getScopedSuffix(readingMode, initialLandscape);
@@ -1770,6 +1774,14 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
     useEffect(() => {
         return () => {
             isMountedRef.current = false;
+            if (autoScrollFrameRef.current) {
+                cancelAnimationFrame(autoScrollFrameRef.current);
+                autoScrollFrameRef.current = null;
+            }
+            if (timerIntervalRef.current) {
+                clearInterval(timerIntervalRef.current);
+                timerIntervalRef.current = null;
+            }
         };
     }, []);
 
@@ -1877,21 +1889,101 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
 
     const isSessionFinishedRef = useRef(false);
 
-    // Stop audio on unmount and save memorization session if active
+    // Stop audio & temporarily pause auto-scroll when app is minimized/backgrounded, and resume auto-scroll when restored
     useEffect(() => {
         const handleStopAudio = () => stopAudio();
         window.addEventListener('quran-stop-audio', handleStopAudio);
 
-        // Stop audio when app is backgrounded (minimized)
+        let resumeFallbackTimer: number | null = null;
+
+        const pauseAutoScrollForBackground = () => {
+            if (resumeFallbackTimer) {
+                clearTimeout(resumeFallbackTimer);
+                resumeFallbackTimer = null;
+            }
+            isAppBackgroundedRef.current = true;
+            if (autoScrollStateRef.current.isActive && !autoScrollStateRef.current.isPaused) {
+                wasAutoscrollingBeforeBackground.current = true;
+                autoScrollPausedRef.current = true;
+                scrollAccumulatorRef.current = 0;
+                const pausedState = { ...autoScrollStateRef.current, isPaused: true };
+                autoScrollStateRef.current = pausedState;
+                setAutoScrollState(pausedState);
+            }
+        };
+
+        const resumeAutoScrollFromBackground = () => {
+            isAppBackgroundedRef.current = false;
+            lastScrollTimeRef.current = performance.now();
+            scrollAccumulatorRef.current = 0;
+
+            if (wasAutoscrollingBeforeBackground.current) {
+                wasAutoscrollingBeforeBackground.current = false;
+                if (autoScrollStateRef.current.isActive && !isAnyMenuOpenRef.current) {
+                    autoScrollPausedRef.current = false;
+                    const resumedState = { ...autoScrollStateRef.current, isPaused: false };
+                    autoScrollStateRef.current = resumedState;
+                    setAutoScrollState(resumedState);
+                }
+            }
+        };
+
+        const handleNativeForeground = () => {
+            if (typeof document !== 'undefined' && document.hidden) {
+                if (resumeFallbackTimer) clearTimeout(resumeFallbackTimer);
+                resumeFallbackTimer = window.setTimeout(() => {
+                    resumeFallbackTimer = null;
+                    resumeAutoScrollFromBackground();
+                }, 150);
+            } else {
+                resumeAutoScrollFromBackground();
+            }
+        };
+
+        const handleVisibilityChangeForAutoScroll = () => {
+            if (typeof document !== 'undefined' && (document.visibilityState === 'hidden' || document.hidden)) {
+                stopAudio();
+                pauseAutoScrollForBackground();
+            } else {
+                if (resumeFallbackTimer) {
+                    clearTimeout(resumeFallbackTimer);
+                    resumeFallbackTimer = null;
+                }
+                resumeAutoScrollFromBackground();
+            }
+        };
+
         const appStateListener = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
             if (!isActive) {
                 stopAudio();
+                pauseAutoScrollForBackground();
+            } else {
+                handleNativeForeground();
             }
         });
 
+        const pauseListener = CapacitorApp.addListener('pause', () => {
+            stopAudio();
+            pauseAutoScrollForBackground();
+        });
+
+        const resumeListener = CapacitorApp.addListener('resume', () => {
+            handleNativeForeground();
+        });
+
+        document.addEventListener('visibilitychange', handleVisibilityChangeForAutoScroll);
+        window.addEventListener('pagehide', pauseAutoScrollForBackground);
+        window.addEventListener('pageshow', handleNativeForeground);
+
         return () => {
+            if (resumeFallbackTimer) clearTimeout(resumeFallbackTimer);
             window.removeEventListener('quran-stop-audio', handleStopAudio);
+            document.removeEventListener('visibilitychange', handleVisibilityChangeForAutoScroll);
+            window.removeEventListener('pagehide', pauseAutoScrollForBackground);
+            window.removeEventListener('pageshow', handleNativeForeground);
             appStateListener.then(l => l.remove());
+            pauseListener.then(l => l.remove());
+            resumeListener.then(l => l.remove());
             
             if (localIsMemorizationMode && !isSessionFinishedRef.current) {
                 const sessionData = {
@@ -2453,6 +2545,7 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
         }
 
         if (autoScrollStateRef.current.isActive) {
+            wasAutoscrollingBeforeBackground.current = false;
             const newPausedState = !autoScrollStateRef.current.isPaused;
             autoScrollPausedRef.current = newPausedState;
             const newState = { ...autoScrollStateRef.current, isPaused: newPausedState };
@@ -2923,7 +3016,7 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
         const t = currentTheme;
         
         // Set Theme CSS Variables
-        root.style.setProperty('--qr-bg', settings.bgColor || t.bg);
+        root.style.setProperty('--qr-bg', settings.bgColor || t.bg || '#ffffff');
         root.style.setProperty('--qr-text', settings.textColor || t.text);
         root.style.setProperty('--qr-fontFamily', settings.fontFamily || t.font);
         root.style.setProperty('--qr-bar-bg', t.barBg);
@@ -3671,6 +3764,7 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
         autoScrollFrameRef.current = null;
         timerIntervalRef.current = null;
         autoScrollPausedRef.current = false;
+        wasAutoscrollingBeforeBackground.current = false;
 
         const newState = { isActive: false, isPaused: false, elapsedTime: autoScrollStateRef.current.elapsedTime };
         autoScrollStateRef.current = newState;
@@ -3693,6 +3787,7 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
         autoScrollFrameRef.current = null;
         timerIntervalRef.current = null;
         autoScrollPausedRef.current = false;
+        wasAutoscrollingBeforeBackground.current = false;
         isJumpingRef.current = false;
         
         // Update state immediately
@@ -3706,10 +3801,10 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
         
         // Delay to let layout stabilize
         setTimeout(() => {
-            if (!mushafContentRef.current) return;
+            if (!mushafContentRef.current || !autoScrollStateRef.current.isActive) return;
             
             scrollAccumulatorRef.current = 0;
-            autoScrollPausedRef.current = false;
+            autoScrollPausedRef.current = autoScrollStateRef.current.isPaused || isAppBackgroundedRef.current;
             lastScrollTimeRef.current = performance.now();
             
             let cachedPageHeight = PAGE_HEIGHT_FALLBACK;
@@ -3717,10 +3812,12 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
 
             const scrollStep = (timestamp: number) => {
                 if (!lastScrollTimeRef.current) lastScrollTimeRef.current = timestamp;
-                const deltaTime = timestamp - lastScrollTimeRef.current;
+                const rawDeltaTime = timestamp - lastScrollTimeRef.current;
+                const deltaTime = Math.min(Math.max(0, rawDeltaTime), 100);
                 lastScrollTimeRef.current = timestamp;
 
-                if (!autoScrollPausedRef.current && mushafContentRef.current) {
+                const isHidden = isAppBackgroundedRef.current || (typeof document !== 'undefined' && document.hidden);
+                if (!autoScrollPausedRef.current && !isHidden && mushafContentRef.current) {
                     const content = mushafContentRef.current;
                     
                     // Recalculate page height every 3 seconds or if it's the first time
@@ -3768,8 +3865,13 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
             autoScrollFrameRef.current = requestAnimationFrame(scrollStep);
 
             timerIntervalRef.current = window.setInterval(() => {
-                 if (!autoScrollPausedRef.current) {
-                     setAutoScrollState(prev => ({ ...prev, elapsedTime: prev.elapsedTime + 1 }));
+                 const isHidden = isAppBackgroundedRef.current || (typeof document !== 'undefined' && document.hidden);
+                 if (!autoScrollPausedRef.current && !isHidden) {
+                     setAutoScrollState(prev => {
+                         const updated = { ...prev, elapsedTime: prev.elapsedTime + 1 };
+                         autoScrollStateRef.current = updated;
+                         return updated;
+                     });
                  }
             }, 1000);
         }, 100); // Reduced delay to 100ms for faster start
@@ -3794,6 +3896,7 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
       }
 
       if (autoScrollStateRef.current.isActive) {
+        wasAutoscrollingBeforeBackground.current = false;
         const newPausedState = !autoScrollStateRef.current.isPaused;
         autoScrollPausedRef.current = newPausedState;
         const newState = { ...autoScrollStateRef.current, isPaused: newPausedState };
@@ -4362,7 +4465,8 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
     const handleInteractionEnd = useCallback(() => {
         setTimeout(() => {
              const isAnyModalOpen = activeModals.length > 0 || tafseerInfo.isOpen || tafseerSelectionInfo.isOpen || ayahContextMenu.isOpen;
-             if (!isAnyModalOpen && autoScrollStateRef.current.isActive && !autoScrollStateRef.current.isPaused) {
+             const isHidden = isAppBackgroundedRef.current || (typeof document !== 'undefined' && document.hidden);
+             if (!isAnyModalOpen && !isHidden && autoScrollStateRef.current.isActive && !autoScrollStateRef.current.isPaused) {
                  autoScrollPausedRef.current = false;
              }
         }, 100);
@@ -4391,6 +4495,7 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
         }
 
         if (autoScrollStateRef.current.isActive) {
+            wasAutoscrollingBeforeBackground.current = false;
             const newPausedState = !autoScrollStateRef.current.isPaused;
             autoScrollPausedRef.current = newPausedState;
             const newState = { ...autoScrollStateRef.current, isPaused: newPausedState };
@@ -4407,7 +4512,7 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
 
     return (
         <div className={`quran-reader-container ${isPageInputActive ? 'force-ui-visible' : ''} ${isLandscape ? 'landscape-mode' : ''} ${isLandscapeUIHidden ? 'landscape-ui-hidden' : ''} ${!isLandscape ? 'vertical-page' : ''} ${isTransparentMode ? 'is-transparent-mode' : ''} ${settings.showPageBorder === false ? 'no-border' : ''} ${(isHideToolbarsEnabled && isLandscapeUIHidden) ? 'hide-toolbars-autoscroll' : ''}`} id="app-container" style={{ 
-            backgroundColor: settings.bgColor, 
+            backgroundColor: settings.bgColor || currentTheme.bg || '#ffffff', 
             color: settings.textColor, 
             fontFamily: settings.fontFamily, 
             position: 'relative', 

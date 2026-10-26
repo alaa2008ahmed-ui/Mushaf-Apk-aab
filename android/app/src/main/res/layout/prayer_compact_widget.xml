@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_compact_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:background="@drawable/widget_bg_white"
+    android:clipToOutline="true"
+    android:gravity="center_vertical"
+    android:baselineAligned="false"
+    android:paddingStart="6dp"
+    android:paddingEnd="6dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
+
+    <!-- Section 1: App Icon & City Name (Exact 1/3 Width) -->
+    <LinearLayout
+        android:id="@+id/widget_compact_left"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="2dp">
+
+        <ImageView
+            android:id="@+id/widget_compact_icon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@mipmap/ic_launcher"
+            android:contentDescription="App Logo" />
+
+        <TextView
+            android:id="@+id/widget_compact_city"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="الدمام"
+            android:textColor="#334155"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:gravity="center"
+            android:layout_marginTop="2dp" />
+    </LinearLayout>
+
+    <!-- Divider 1 -->
+    <FrameLayout
+        android:id="@+id/widget_compact_sep1"
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:background="#E2E8F0"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="6dp" />
+
+    <!-- Section 2: Next Prayer & Live Countdown (Exact 1/3 Width) -->
+    <LinearLayout
+        android:id="@+id/widget_compact_center"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="2dp">
+
+        <TextView
+            android:id="@+id/widget_compact_prayer_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="العصر بعد"
+            android:textColor="#10B981"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:gravity="center" />
+
+        <Chronometer
+            android:id="@+id/widget_compact_countdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#0F172A"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginTop="2dp"
+            android:countDown="true" />
+    </LinearLayout>
+
+    <!-- Divider 2 -->
+    <FrameLayout
+        android:id="@+id/widget_compact_sep2"
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:background="#E2E8F0"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="6dp" />
+
+    <!-- Section 3: Exact Prayer Time (Exact 1/3 Width, Clean Centered, No Refresh Icon) -->
+    <LinearLayout
+        android:id="@+id/widget_compact_right"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="2dp">
+
+        <TextView
+            android:id="@+id/widget_compact_prayer_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="02:38"
+            android:textColor="#0F172A"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:gravity="center" />
+    </LinearLayout>
+
+</LinearLayout>

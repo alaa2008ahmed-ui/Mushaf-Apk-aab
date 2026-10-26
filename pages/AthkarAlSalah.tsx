@@ -35,13 +35,8 @@ const SalahZikrCard = ({
 }) => {
     const { language } = useLanguage();
     const isEn = language === 'en';
-    const isBlackTheme = theme.bgColor === '#000000';
-    const isDefaultTheme = themeKey === 'default' || theme.name === 'الافتراضي' || !!theme.isOriginal || !themeKey;
-    const cardBorderColor = isDefaultTheme 
-        ? '#000000' 
-        : (isBlackTheme 
-            ? 'rgba(255, 255, 255, 0.2)' 
-            : (theme.palette?.[0] + '33' || 'rgba(0, 0, 0, 0.08)'));
+    const isBlackTheme = theme.bgColor === '#000000' || theme.name === 'أبيض وأسود' || theme.name === 'اسود';
+    const primaryColor = isBlackTheme ? 'rgba(255, 255, 255, 0.22)' : (theme.palette?.[0] || theme.accent || '#2E7D5E');
     const [isFav, setIsFav] = useState(false);
     const [playingText, setPlayingText] = useState<string | null>(null);
     const isFinished = zikr.currentCount === 0;
@@ -137,27 +132,19 @@ const SalahZikrCard = ({
 
     return (
         <div 
-            className={`themed-card p-5 pb-2 rounded-2xl border relative overflow-hidden group mb-4 transition-all duration-300 ${isFinished ? 'opacity-60' : 'cursor-pointer'}`} 
+            className={`bg-white dark:bg-[#1E293B] p-5 pb-3 rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_2px_6px_-1px_rgba(0,0,0,0.02)] border border-slate-100/80 dark:border-white/5 relative overflow-hidden group mb-4 transition-all duration-300 ${isFinished ? 'opacity-60' : 'cursor-pointer hover:shadow-md'}`} 
             onClick={onDecrement}
-            style={{
-                borderColor: cardBorderColor,
-                borderWidth: '1.5px',
-                borderStyle: 'solid'
-            }}
         >
             <div className={`flex justify-between items-start mb-2 ${isEn ? 'flex-row' : ''}`}>
-                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold shadow-sm" style={{backgroundColor: theme.palette[1]+'30', color: theme.palette[1]}}>
+                <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold" style={{ backgroundColor: `${primaryColor}14`, color: primaryColor }}>
                     {displayNote}
                 </span>
                 <div 
                     className={`count-badge w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shadow-md transform transition-transform`} 
                     style={
                         isFinished 
-                        ? { backgroundColor: 'var(--badge-finished-bg)', color: 'var(--badge-finished-text)' } 
-                        : (isDefaultTheme 
-                            ? { backgroundColor: '#ffffff', color: '#000000', border: '1px solid rgba(0,0,0,0.1)' } 
-                            : { backgroundImage: `linear-gradient(to bottom right, ${theme.palette[0]}, ${theme.palette[1]})`, color: theme.name === 'اسود' ? '#000000' : '#ffffff' }
-                        )
+                        ? { backgroundColor: '#94a3b8', color: '#ffffff' } 
+                        : { backgroundColor: primaryColor, color: '#ffffff', boxShadow: `0 4px 14px 0 ${primaryColor}40` }
                     }
                 >
                     {isFinished ? <i className="fa-solid fa-check"></i> : zikr.currentCount}
@@ -241,9 +228,10 @@ function AthkarAlSalah({ onBack, onNavigate }: AthkarAlSalahProps) {
     const { theme, themeKey } = useTheme();
     const { language } = useLanguage();
     const isEn = language === 'en';
-    const isBlackTheme = theme.bgColor === '#000000';
+    const isBlackTheme = theme.bgColor === '#000000' || theme.name === 'أبيض وأسود' || theme.name === 'اسود';
+    const primaryColor = isBlackTheme ? '#FFFFFF' : (theme.palette?.[0] || theme.accent || '#2E7D5E');
     const isDefaultTheme = themeKey === 'default' || theme.name === 'الافتراضي' || !!theme.isOriginal || !themeKey;
-    const cardBorderColor = isBlackTheme ? '#222222' : (theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)');
+    const cardBorderColor = isBlackTheme ? 'rgba(255, 255, 255, 0.1)' : 'transparent';
     const [currentPrayer, setCurrentPrayer] = useState<{ id: string; title: string; titleEn?: string } | null>(null);
     const [athkarList, setAthkarList] = useState<any[]>([]);
     const [zoomedZikr, setZoomedZikr] = useState<any>(null);
@@ -569,7 +557,7 @@ function AthkarAlSalah({ onBack, onNavigate }: AthkarAlSalahProps) {
                     </div>
                 ) : !currentPrayer ? (
                     <>
-                        <div id="prayersMenu" className={activeTab === 'grid' ? "grid grid-cols-2 gap-3.5" : "space-y-4"}>
+                        <div id="prayersMenu" className={activeTab === 'grid' ? "grid grid-cols-2 gap-3.5" : "space-y-3.5"}>
                             {filteredPrayerOptions.map(prayer => (
                                  <div 
                                       key={prayer.id} 
@@ -578,36 +566,29 @@ function AthkarAlSalah({ onBack, onNavigate }: AthkarAlSalahProps) {
                                           `أذكار ${prayer.title}`, 
                                           `${prayer.titleEn} Adhkar`
                                       )} 
-                                      className={`themed-card p-4 rounded-xl shadow-sm border flex ${activeTab === 'grid' ? 'flex-col items-center text-center justify-center py-6 gap-3' : 'items-center justify-between'} cursor-pointer active:scale-95 transition`}
-                                      style={{ 
-                                          borderColor: cardBorderColor,
-                                          borderWidth: '1.5px',
-                                          borderStyle: 'solid',
-                                          ...(activeTab === 'grid' ? {} : (isEn ? {
-                                              borderLeftWidth: '4px',
-                                              borderLeftColor: prayer.color === 'primary' ? (isDefaultTheme ? '#000000' : theme.palette[0]) : theme.palette[1]
-                                          } : {
-                                              borderRightWidth: '4px',
-                                              borderRightColor: prayer.color === 'primary' ? (isDefaultTheme ? '#000000' : theme.palette[0]) : theme.palette[1]
-                                          }))
-                                      }}
+                                      className={`bg-white dark:bg-[#1E293B] p-4 sm:p-5 rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_2px_6px_-1px_rgba(0,0,0,0.02)] border border-slate-100/80 dark:border-white/5 flex ${activeTab === 'grid' ? 'flex-col items-center text-center justify-center py-6 gap-3' : 'items-center justify-between'} cursor-pointer active:scale-98 transition-all hover:shadow-md group`}
                                  >
                                     <div className={`flex ${activeTab === 'grid' ? 'flex-col items-center gap-3' : 'items-center gap-4'}`}>
                                         <div 
-                                             className={`w-12 h-12 rounded-full flex items-center justify-center ${themeKey === 'default' ? 'shadow-inner border border-black/5' : ''}`} 
+                                             className="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 shrink-0" 
                                              style={{
-                                                 backgroundColor: themeKey === 'default' ? '#FFFFFF' : (prayer.color === 'primary' ? theme.palette[0]+'20' : theme.palette[1]+'20'), 
-                                                 color: themeKey === 'default' ? '#000000' : (prayer.color === 'primary' ? theme.palette[0] : theme.palette[1])
+                                                 backgroundColor: isBlackTheme ? 'rgba(255, 255, 255, 0.1)' : `${primaryColor}14`, 
+                                                 color: primaryColor
                                              }}
                                         >
                                             <i className={`fa-solid ${prayer.icon} text-xl`}></i>
                                         </div>
                                         <div>
-                                            <h2 className="font-bold text-base sm:text-lg">
+                                            <h2 className="font-bold text-base sm:text-lg text-slate-800 dark:text-white">
                                                 {isEn ? prayer.titleEn : prayer.title}
                                             </h2>
                                         </div>
                                     </div>
+                                    {activeTab === 'list' && (
+                                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 dark:text-zinc-500 opacity-60">
+                                            <i className={`fa-solid ${isEn ? 'fa-chevron-right' : 'fa-chevron-left'} text-sm`}></i>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>

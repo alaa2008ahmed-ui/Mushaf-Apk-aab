@@ -198,6 +198,10 @@ export const getReadersForMode = (
     if (mode === 'translation') {
         return [TRANSLATION_READER];
     }
+    // If a custom list of readers is passed (e.g. 250 reciters from ListenQuran), use it
+    if (baseReaders && baseReaders !== READERS) {
+        return baseReaders;
+    }
     // For 'mushaf', 'tafseer', 'meanings': ONLY Arabic reciters!
     return ARABIC_READERS;
 };

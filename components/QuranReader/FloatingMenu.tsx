@@ -1483,7 +1483,7 @@ const FloatingMenu: React.FC<FloatingMenuProps> = ({
                                 style={{
                                   backgroundColor:
                                     id === "black"
-                                      ? "#000000"
+                                      ? "#10b981"
                                       : id === "deep_black"
                                         ? "#000000"
                                         : theme.accent ||

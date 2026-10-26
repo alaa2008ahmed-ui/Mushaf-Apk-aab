@@ -160,3 +160,14 @@ body:not(.quran-context) .font-mirza,
 body:not(.quran-context) .font-gulzar {
     font-family: var(--theme-font) !important;
 }
+
+/* Quran Reader background rules: Pure white in default/light mode, clean dark in dark mode */
+body.quran-context {
+  background-color: var(--qr-bg, #ffffff) !important;
+  background-image: none !important;
+}
+
+html.dark body.quran-context {
+  background-color: var(--qr-bg, #000000) !important;
+  background-image: none !important;
+}

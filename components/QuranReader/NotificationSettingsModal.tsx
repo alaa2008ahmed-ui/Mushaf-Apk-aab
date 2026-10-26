@@ -410,13 +410,13 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
                                     <div className="flex flex-col gap-1 pr-2">
                                         <div className="flex items-center gap-2">
                                             <span className="font-bold text-sm">
-                                                {isEn ? 'Persistent Lock Screen & Status Bar Alert' : 'تثبيت إشعار الصلاة بشريط الحالة وشاشة القفل'}
+                                                {isEn ? 'Persistent Notification in Shade' : 'تثبيت إشعار الصلاة في قائمة الإشعارات'}
                                             </span>
                                         </div>
                                         <span className="text-[11px] opacity-80 leading-relaxed">
                                             {isEn 
-                                                ? 'Displays next prayer & live countdown without battery drain' 
-                                                : 'إشعار دائم يوضح الصلاة القادمة والوقت المتبقي بدقة حتى عند إغلاق التطبيق وقفل الشاشة'}
+                                                ? 'Appears when pulling down the notification bar without showing a top status bar icon' 
+                                                : 'يظهر ضمن الإشعارات عند سحب الشريط العلوي للهاتف بدون أيقونة في الشريط العلوي'}
                                         </span>
                                     </div>
                                     <div 

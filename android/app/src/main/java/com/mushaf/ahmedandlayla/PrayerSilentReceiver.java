@@ -51,9 +51,14 @@ public class PrayerSilentReceiver extends BroadcastReceiver {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         if (Intent.ACTION_BOOT_COMPLETED.equals(action) || 
             "android.intent.action.BOOT_COMPLETED".equals(action) || 
+            Intent.ACTION_TIME_CHANGED.equals(action) ||
+            Intent.ACTION_TIMEZONE_CHANGED.equals(action) ||
+            Intent.ACTION_DATE_CHANGED.equals(action) ||
             ACTION_RESTORE_NOTIFICATION.equals(action) ||
             ACTION_UPDATE_NOTIFICATION.equals(action)) {
             PersistentPrayerNotification.update(context);
+            PrayerWidgetProvider.updateAllWidgets(context);
+            PrayerCompactWidgetProvider.updateAllWidgets(context);
             return;
         }
 
@@ -168,12 +173,18 @@ public class PrayerSilentReceiver extends BroadcastReceiver {
                 .build();
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                SharedPreferences langPrefs = context.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE);
+                String appLang = langPrefs.getString("app_language", "ar");
+                boolean isArabic = !"en".equalsIgnoreCase(appLang);
+
                 NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
-                    "الصامت التلقائي للصلاة",
+                    isArabic ? "الصامت التلقائي للصلاة" : "Auto Silent Mode",
                     NotificationManager.IMPORTANCE_HIGH
                 );
-                channel.setDescription("إشعارات تفعيل وإلغاء وضع الصامت التلقائي أثناء الصلاة");
+                channel.setDescription(isArabic 
+                    ? "إشعارات تفعيل وإلغاء وضع الصامت التلقائي أثناء الصلاة"
+                    : "Notifications for activating and ending auto-silent mode during prayer");
                 channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
                 channel.setBypassDnd(true);
                 channel.enableVibration(true);
@@ -193,12 +204,15 @@ public class PrayerSilentReceiver extends BroadcastReceiver {
 
             NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_name)
+                .setColor(0xFF2E7D5E)
                 .setContentTitle(title)
                 .setContentText(message)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setGroup("standalone_silent_" + notifId)
+                .setGroupSummary(false)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
 
             if (soundUri != null) {

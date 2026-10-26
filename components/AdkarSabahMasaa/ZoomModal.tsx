@@ -21,11 +21,15 @@ interface ZoomModalProps {
 const toArabicNumerals = (num: number) => String(num).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[+d]);
 
 const ZoomModal: React.FC<ZoomModalProps> = ({ zoomedDhikr, onClose, setToastMessage }) => {
-    const { theme } = useTheme();
+    const { theme, themeKey } = useTheme();
     const { language } = useLanguage();
     const isEn = language === 'en';
 
     if (!zoomedDhikr) return null;
+
+    const isBlackTheme = theme.bgColor === '#000000' || themeKey === 'deep_black' || theme.name === 'اسود' || theme.name === 'أبيض وأسود';
+    const primaryColor = isBlackTheme ? '#FFFFFF' : (theme.palette?.[0] || theme.accent || '#2E7D5E');
+    const btnTextColor = isBlackTheme ? '#000000' : (theme.btnText || '#FFFFFF');
 
     const translation = getAdhkarTranslation(zoomedDhikr.text);
     const displayText = isEn ? (translation?.text || zoomedDhikr.textEn || zoomedDhikr.text) : zoomedDhikr.text;
@@ -53,11 +57,11 @@ const ZoomModal: React.FC<ZoomModalProps> = ({ zoomedDhikr, onClose, setToastMes
 
     return (
         <div 
-            className="fixed inset-0 bg-black/80 z-[100] flex justify-center items-center p-4 backdrop-blur-sm" 
+            className="fixed inset-0 bg-black/60 z-[100] flex justify-center items-center p-4 backdrop-blur-md" 
             onClick={onClose}
         >
             <div 
-                className="bg-modal-bg text-modal-text p-8 rounded-3xl w-full max-w-2xl text-center relative scale-in shadow-2xl border-2 border-modal-border flex flex-col max-h-[90vh]" 
+                className="bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 p-6 sm:p-8 rounded-3xl w-full max-w-2xl text-center relative scale-in shadow-2xl border-0 flex flex-col max-h-[90vh]" 
                 style={{ fontFamily: isEn ? 'sans-serif' : theme.font }} 
                 dir={isEn ? 'ltr' : 'rtl'}
                 onClick={e => e.stopPropagation()}
@@ -73,7 +77,7 @@ const ZoomModal: React.FC<ZoomModalProps> = ({ zoomedDhikr, onClose, setToastMes
                         </div>
                     ) : (
                         <div 
-                            className="text-3xl md:text-4xl leading-relaxed font-amiri text-center select-none"
+                            className="text-2xl md:text-3xl lg:text-4xl leading-[2.3] font-amiri text-center select-none"
                             dir="rtl"
                         >
                             {displayText}
@@ -81,7 +85,7 @@ const ZoomModal: React.FC<ZoomModalProps> = ({ zoomedDhikr, onClose, setToastMes
                     )}
 
                     {displaySource && (
-                        <p className="text-base sm:text-lg mt-6 font-bold" style={{ color: theme.palette[0] }} dir={isEn ? 'ltr' : 'rtl'}>
+                        <p className="text-base sm:text-lg mt-6 font-bold" style={{ color: primaryColor }} dir={isEn ? 'ltr' : 'rtl'}>
                             {displaySource}
                         </p>
                     )}
@@ -98,8 +102,8 @@ const ZoomModal: React.FC<ZoomModalProps> = ({ zoomedDhikr, onClose, setToastMes
                 <div className="mt-6 shrink-0 flex items-center gap-3">
                     <button 
                         onClick={handleShare} 
-                        className="flex-1 py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 hover:opacity-95 transition-opacity shadow-md"
-                        style={{ backgroundColor: theme.palette[0] }}
+                        className="flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-95 transition-opacity shadow-sm cursor-pointer"
+                        style={{ backgroundColor: primaryColor, color: btnTextColor }}
                         title={isEn ? "Share Image" : "مشاركة كصورة"}
                     >
                         <i className="fa-solid fa-share-nodes"></i>
@@ -107,7 +111,7 @@ const ZoomModal: React.FC<ZoomModalProps> = ({ zoomedDhikr, onClose, setToastMes
                     </button>
                     <button 
                         onClick={onClose} 
-                        className="flex-1 py-3 rounded-xl font-bold bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:opacity-90 transition-opacity"
+                        className="flex-1 py-3 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 transition-colors cursor-pointer"
                     >
                         {isEn ? 'Close' : 'إغلاق'}
                     </button>

@@ -76,7 +76,9 @@ export const resetCommunityGuides = (): void => {
       'calc_subtab_udhiyah_spotlight',
       'calc_tab_fitr_udhiyah_spotlight',
       'calc_tab_fitr-udhiyah_spotlight',
-      'calculator_page_spotlight'
+      'calculator_page_spotlight',
+      'worship_mentor_page_spotlight',
+      'custom_habit_modal_spotlight'
     ];
     keys.forEach(k => localStorage.removeItem(`guide_seen_${k}`));
   } catch (e) {}

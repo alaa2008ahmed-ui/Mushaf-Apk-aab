@@ -1128,8 +1128,13 @@ export const PrayerTimesProvider = ({ children }: { children: ReactNode }) => {
                 }
 
                 if (notificationsToSchedule.length > 0) {
-                    await LocalNotifications.schedule({ notifications: notificationsToSchedule });
-                    console.log(`[Capacitor] Scheduled ${notificationsToSchedule.length} prayer/iqama notifications.`);
+                    const unbundledPrayerNotifs = notificationsToSchedule.map(n => ({
+                        ...n,
+                        group: `standalone_prayer_${n.id}`,
+                        groupSummary: false
+                    }));
+                    await LocalNotifications.schedule({ notifications: unbundledPrayerNotifs });
+                    console.log(`[Capacitor] Scheduled ${unbundledPrayerNotifs.length} independent prayer/iqama notifications.`);
                 }
             } catch (err) {
                 console.warn('Error scheduling via LocalNotifications:', err);
@@ -1158,6 +1163,8 @@ export const PrayerTimesProvider = ({ children }: { children: ReactNode }) => {
                     foreground: true,
                     smallIcon: 'ic_stat_name',
                     icon: 'ic_stat_name',
+                    group: `standalone_prayer_${n.id}`,
+                    groupSummary: false,
                     androidAllowWhileIdle: true
                 }));
                 if (cordovaNotifs.length > 0) {
@@ -1236,6 +1243,8 @@ export const PrayerTimesProvider = ({ children }: { children: ReactNode }) => {
         const midnightLabel = isEn ? `Midnight: ${to12h(nightTimes.midnight)}` : `منتصف الليل : ${to12h(nightTimes.midnight)}`;
         const lastThirdLabel = isEn ? `Last Third: ${to12h(nightTimes.lastThird)}` : `الثلث الأخير : ${to12h(nightTimes.lastThird)}`;
 
+        const { methodId } = getCalculationParams(new Date(), config.location);
+
         updateAndroidWidget({
             hijri: currentDates.hijri,
             gregorian: currentDates.gregorian,
@@ -1245,9 +1254,21 @@ export const PrayerTimesProvider = ({ children }: { children: ReactNode }) => {
             next_prayer_id: currentNext.key.toLowerCase(),
             remaining_time: currentCountdown.split(':').slice(0, 2).join(':'), // HH:MM
             target_time_millis: Date.now() + (currentNext.date.getTime() - currentNext.cityNow.getTime()),
+            base_date_millis: Date.now(),
+            coordinates: {
+                lat: config.location.lat,
+                lng: config.location.lng
+            },
+            method_id: methodId,
+            prayer_offsets: config.prayerOffsets,
+            isSummerTime: config.isSummerTime,
             midnight: midnightLabel,
             last_third: lastThirdLabel,
             app_language: language,
+            theme: {
+                themeKey,
+                isDark: themeKey === 'dark' || (typeof document !== 'undefined' && document.documentElement.classList.contains('dark'))
+            },
             times: {
                 fajr: formatTime(currentTimes.Fajr, config.prayerOffsets.Fajr || 0),
                 sunrise: formatTime(currentTimes.Sunrise, config.prayerOffsets.Sunrise || 0),
@@ -1279,7 +1300,7 @@ export const PrayerTimesProvider = ({ children }: { children: ReactNode }) => {
                 nextIsha: getTimestamp(currentTimes.Isha, config.prayerOffsets.Isha || 0, true)
             }
         }, config.syncWidgetTheme !== false);
-    }, [config.location, config.prayerOffsets, config.isSummerTime, config.syncWidgetTheme, language, isEn]);
+    }, [config.location, config.prayerOffsets, config.isSummerTime, config.syncWidgetTheme, language, isEn, themeKey]);
 
     // --- Next Prayer & Countdown Logic ---
     useEffect(() => {
@@ -1462,7 +1483,8 @@ export const PrayerTimesProvider = ({ children }: { children: ReactNode }) => {
                                         body: isEn 
                                             ? 'Remember Allah. The Prophet ﷺ said: "O Bilal, call the Adhan so we may find comfort in prayer."' 
                                             : 'لا تنس ذكر الله. قال رسول الله ﷺ: "أرحنا بها يا بلال"',
-                                        icon: '/icon.png'
+                                        icon: '/icon.png',
+                                        tag: `standalone_web_adhan_${key}_${Date.now()}`
                                     });
                                 } catch (e) {}
                             }

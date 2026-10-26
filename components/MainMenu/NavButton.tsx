@@ -3,9 +3,11 @@ import { motion } from 'motion/react';
 
 interface NavButtonProps {
     label: string;
+    icon?: React.ReactNode;
     onClick: () => void;
     className?: string;
     color?: string;
+    gradient?: string;
     border?: string;
     isEditMode?: boolean;
     onResize?: (e: React.MouseEvent) => void;
@@ -22,9 +24,11 @@ interface NavButtonProps {
 
 const NavButton: React.FC<NavButtonProps> = ({ 
     label, 
+    icon,
     onClick, 
     className, 
-    color = '#8B5CF6', 
+    color = '#635B7F', 
+    gradient,
     border, 
     isEditMode, 
     onResize, 
@@ -39,6 +43,9 @@ const NavButton: React.FC<NavButtonProps> = ({
     onBadgeClick
 }) => {
     const isBlackButton = color === '#000000' || color?.toLowerCase() === '#000000' || color === '#111111' || color === '#0a0a0a' || color === '#121212';
+    const backgroundStyle = isGlass
+        ? (color ? `${color}55` : 'rgba(255, 255, 255, 0.25)')
+        : (gradient || color);
 
     return (
         <div className={`h-full ${className} relative group`} data-id={dataId}>
@@ -49,15 +56,17 @@ const NavButton: React.FC<NavButtonProps> = ({
                 onClick={onClick} 
                 className={`w-full rounded-2xl p-1 sm:p-1.5 font-bold relative text-[10px] min-[360px]:text-[10.5px] min-[400px]:text-[11px] min-[430px]:text-[11.5px] h-full flex items-center justify-center text-center ${isEditMode ? 'cursor-move animate-pulse opacity-80' : ''}`}
                 style={{ 
-                    backgroundColor: isGlass ? (color ? `${color}55` : 'rgba(255, 255, 255, 0.25)') : color, 
+                    background: backgroundStyle, 
                     backdropFilter: isGlass ? 'blur(12px) saturate(180%)' : 'none',
                     WebkitBackdropFilter: isGlass ? 'blur(12px) saturate(180%)' : 'none',
                     color: isBlackButton ? '#FFFFFF' : (btnText || '#FFFFFF'),
-                    border: border || (isBlackButton ? '1px solid rgba(255, 255, 255, 0.25)' : (isGlass ? (color ? `1px solid ${color}80` : '1px solid rgba(255, 255, 255, 0.4)') : '1px solid rgba(255,255,255,0.1)')),
+                    border: border !== undefined ? border : (isBlackButton ? '1px solid rgba(255, 255, 255, 0.25)' : (isGlass ? (color ? `1px solid ${color}80` : '1px solid rgba(255, 255, 255, 0.4)') : 'none')),
                     boxShadow: isGlass 
-                        ? (color ? `0 6px 0 ${color}40, 0 8px 24px 0 rgba(0,0,0,0.1)` : '0 8px 32px 0 rgba(31, 38, 135, 0.07)') 
-                        : (isBlackButton ? '0 5px 0 #2a2a2a, 0 8px 16px rgba(0,0,0,0.5)' : `0 6px 0 ${color}90, 0 10px 15px rgba(0,0,0,0.15)`),
-                    textShadow: isGlass ? 'none' : (isBlackButton ? '0 1px 2px rgba(0,0,0,0.8)' : '0 1px 2px rgba(0,0,0,0.1)'),
+                        ? (color ? `0 5px 0 ${color}40, 0 8px 24px 0 rgba(0,0,0,0.1)` : '0 8px 32px 0 rgba(31, 38, 135, 0.07)') 
+                        : (isBlackButton 
+                            ? '0 5px 0 #2a2a2a, 0 8px 16px rgba(0,0,0,0.5)' 
+                            : `0 4.5px 0 rgba(0, 0, 0, 0.18), 0 7px 14px rgba(0, 0, 0, 0.08)`),
+                    textShadow: isGlass ? 'none' : (isBlackButton ? '0 1px 2px rgba(0,0,0,0.8)' : '0 1px 2px rgba(0,0,0,0.12)'),
                     textRendering: 'optimizeLegibility',
                     WebkitFontSmoothing: 'antialiased'
                 }}
@@ -68,9 +77,16 @@ const NavButton: React.FC<NavButtonProps> = ({
                     <div className="absolute inset-x-0 top-0 h-[1px] bg-white/20 rounded-t-2xl"></div>
                 )}
                 
-                <span className={`relative z-10 font-kufi whitespace-nowrap overflow-hidden text-ellipsis max-w-full ${rightAction ? 'pr-8 pl-2' : (leftAction ? 'pl-8 pr-2' : 'px-0.5')}`}>
-                    {label}
-                </span>
+                <div className={`relative z-10 flex items-center justify-center gap-1 sm:gap-1.5 max-w-full min-w-0 ${rightAction ? 'pr-8 pl-2' : (leftAction ? 'pl-8 pr-2' : 'px-0.5')}`}>
+                    {icon && (
+                        <span className="shrink-0 text-white/95 flex items-center justify-center pointer-events-none drop-shadow-xs">
+                            {icon}
+                        </span>
+                    )}
+                    <span className="font-kufi whitespace-nowrap overflow-hidden text-ellipsis">
+                        {label}
+                    </span>
+                </div>
 
                 {/* Active mask */}
                 {!isEditMode && (

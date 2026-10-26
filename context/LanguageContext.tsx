@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Preferences } from '@capacitor/preferences';
 import { syncDailyWirdNotifications } from '../utils/dailyWirdNotificationService';
 import { setupNotifications } from '../utils/notifications';
+import { setNativeAppLanguage } from '../utils/silentMode';
 
 export type Language = 'ar' | 'en';
 
@@ -65,16 +66,16 @@ export const ISLAMIC_TRANSLATIONS: Translations = {
     en: 'Hisn Al-Muslim'
   },
   'menu.tasbeeh': {
-    ar: 'السبحة',
-    en: 'Electronic Tasbeeh'
+    ar: 'التسبيح',
+    en: 'Tasbeeh'
   },
   'menu.calendar': {
     ar: 'التقويم',
     en: 'Islamic Calendar'
   },
   'menu.qibla': {
-    ar: 'القبلة',
-    en: 'Qibla Direction'
+    ar: 'البوصلة',
+    en: 'Compass'
   },
   'menu.hajj_umrah': {
     ar: 'الحج والعمرة',
@@ -89,8 +90,8 @@ export const ISLAMIC_TRANSLATIONS: Translations = {
     en: 'Calculators'
   },
   'menu.asmaul_husna': {
-    ar: 'أسماء الله الحسنى',
-    en: 'Divine Names'
+    ar: 'أسماء الله',
+    en: 'Names of Allah'
   },
   'menu.daily_wird': {
     ar: 'الورد اليومي',
@@ -113,8 +114,8 @@ export const ISLAMIC_TRANSLATIONS: Translations = {
     en: 'Islamic Sites'
   },
   'menu.others': {
-    ar: 'الرقية الشرعية',
-    en: 'Al-Ruqyah'
+    ar: 'الرقية',
+    en: 'Ruqyah'
   },
   'menu.prophetic_seerah': {
     ar: 'السيرة النبوية',
@@ -574,6 +575,14 @@ export const ISLAMIC_TRANSLATIONS: Translations = {
     ar: 'وضع العرض',
     en: 'Landscape View'
   },
+  'common.landscape': {
+    ar: 'عرضي',
+    en: 'Landscape'
+  },
+  'common.quran': {
+    ar: 'القرآن الكريم',
+    en: 'The Noble Qur\'an'
+  },
 
   // Prayer Cards on Home Screen
   'prayer.previous': {
@@ -1004,6 +1013,13 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     document.documentElement.setAttribute('lang', language);
     document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
 
+    // Update native Android app locale & notification titles
+    try {
+      setNativeAppLanguage(language).catch(() => {});
+    } catch (e) {
+      // ignore
+    }
+
     // Sync Daily Wird notifications with the new language
     try {
       syncDailyWirdNotifications(language);
@@ -1051,19 +1067,19 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
       'sabah-masaa': 'Daily Adhkar',
       'salah-adhkar': 'Salah Adhkar',
       'hisn-muslim': 'Hisn Al-Muslim',
-      'tasbeeh': 'Electronic Tasbeeh',
+      'tasbeeh': 'Tasbeeh',
       'calendar': 'Islamic Calendar',
-      'qibla': 'Qibla Direction',
+      'qibla': 'Compass',
       'hajj-umrah': 'Hajj & Umrah',
       'nawawi': 'Forty Hadith',
       'calculators': 'Calculators',
-      'asmaul-husna': 'Divine Names',
+      'asmaul-husna': 'Names of Allah',
       'daily-wird': 'Daily Wird',
       'habit-tracker': 'Habit Tracker',
       'memorization': 'Memorization',
       'voice-control': 'Voice Control',
       'islamic-sites': 'Islamic Sites',
-      'others': 'Al-Ruqyah',
+      'others': 'Ruqyah',
       'prophetic-seerah': 'Prophetic Seerah',
       'ten-promised': 'The Ten Promised Paradise',
       'tajweed-education': 'Tajweed Rules',

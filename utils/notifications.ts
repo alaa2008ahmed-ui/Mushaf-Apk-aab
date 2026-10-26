@@ -400,7 +400,12 @@ export const setupNotifications = async (settings?: PhoneNotificationSettings, l
     } catch (e) {}
 
     if (notificationsToSchedule.length > 0) {
-      await LocalNotifications.schedule({ notifications: notificationsToSchedule });
+      const unbundledAthkarNotifs = notificationsToSchedule.map((n: any) => ({
+        ...n,
+        group: `standalone_athkar_${n.id}`,
+        groupSummary: false,
+      }));
+      await LocalNotifications.schedule({ notifications: unbundledAthkarNotifs });
     }
 
     // Synchronize Daily Wird reminders if active with app language

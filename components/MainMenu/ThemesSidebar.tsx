@@ -64,6 +64,7 @@ export const ThemesSidebar: React.FC<ThemesSidebarProps> = ({ isOpen, onClose })
     }
   };
 
+  const isBlackTheme = themeKey === 'deep_black' || theme.bgColor === '#000000' || theme.name === 'اسود' || theme.name === 'black';
   const themeBorderColor = (theme.palette && theme.palette[0]) || theme.accent || '#10b981';
 
   return (
@@ -86,8 +87,8 @@ export const ThemesSidebar: React.FC<ThemesSidebarProps> = ({ isOpen, onClose })
             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
             className={`w-[88px] sm:w-[98px] shadow-2xl flex flex-col ${
               isRTL 
-                ? 'rounded-l-2xl rounded-r-none border-y-2 border-l-2 border-r-0' 
-                : 'rounded-r-2xl rounded-l-none border-y-2 border-r-2 border-l-0'
+                ? 'rounded-l-2xl rounded-r-none' 
+                : 'rounded-r-2xl rounded-l-none'
             } overflow-hidden`}
             dir={isRTL ? "rtl" : "ltr"}
             style={{
@@ -97,16 +98,16 @@ export const ThemesSidebar: React.FC<ThemesSidebarProps> = ({ isOpen, onClose })
               right: isRTL ? 0 : 'auto',
               left: isRTL ? 'auto' : 0,
               zIndex: 1250,
-              backgroundColor: '#FFFFFF',
-              color: '#1e293b',
-              borderColor: themeBorderColor,
+              backgroundColor: isBlackTheme ? '#000000' : (theme.bgColor || '#DFE5EC'),
+              color: isBlackTheme ? '#FFFFFF' : theme.textColor,
+              border: 'none',
               fontFamily: theme.font,
             }}
           >
             {/* Quick Actions Row */}
             <div 
-              className="p-1.5 border-b grid grid-cols-2 gap-1 shrink-0 bg-slate-50 relative z-10"
-              style={{ borderBottomColor: `${themeBorderColor}25` }}
+              className="p-1.5 grid grid-cols-2 gap-1 shrink-0 relative z-10"
+              style={{ backgroundColor: 'transparent', borderBottom: 'none' }}
             >
               <button
                 type="button"
@@ -139,7 +140,7 @@ export const ThemesSidebar: React.FC<ThemesSidebarProps> = ({ isOpen, onClose })
             />
 
             {/* Scrollable Theme Circles */}
-            <div className="flex-1 overflow-y-auto p-2 pb-2.5 scrollbar-hide relative z-10 bg-white">
+            <div className="flex-1 overflow-y-auto p-2 pb-2.5 scrollbar-hide relative z-10" style={{ backgroundColor: 'transparent' }}>
               <div 
                 className="grid grid-cols-2 gap-y-[10.7px] gap-x-2 place-items-center py-2"
                 style={{ rowGap: '10.7px' }}
