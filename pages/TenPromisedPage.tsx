@@ -353,7 +353,7 @@ const TenPromisedPage: React.FC<TenPromisedPageProps> = ({ onBack, onNavigate, o
         text += `📖 ${ui.tabPreIslam}:\n${preIslam}\n\n`;
         text += `🕌 ${ui.tabConversion}:\n${conversion}\n\n`;
         text += `💡 ${ui.tabLessons}:\n${lessons}\n\n`;
-        text += isEn ? 'Shared from Mushaf Ahmed & Laila App' : 'مشارك من تطبيق مصحف أحمد وليلى';
+        text += isEn ? 'Shared from Mushaf Ahmed & Laila App' : 'مشارك من تطبيق مصحف أحمد و ليلى';
 
         navigator.clipboard.writeText(text).then(() => {
             showToast(ui.toastCopiedBio);
@@ -475,7 +475,7 @@ const TenPromisedPage: React.FC<TenPromisedPageProps> = ({ onBack, onNavigate, o
                                     title={ui.guideTooltip}
                                     aria-label={ui.guideTooltip}
                                 >
-                                    <HelpCircle size={19} />
+                                    <i className="fa-solid fa-circle-question text-lg text-black"></i>
                                 </button>
                             )}
                             <ThemePageLock />

@@ -3619,16 +3619,17 @@ const QuranReader: FC<{ page: string, onBack: () => void, onNavigate: (pageId: s
     const saveBookmark = () => { 
         const current = currentAyahRef.current;
         if (!current) { showToast('اختر آية أولاً'); return; } 
-        const stored = JSON.parse(localStorage.getItem('quran_bookmarks_list' + bookmarkSuffix) || '[]'); 
+        const appLang = localStorage.getItem('app_language') || 'ar'; 
+        const isEnLocale = appLang === 'en'; 
         const date = new Date(); 
         const newBookmark = { 
             id: Date.now(), 
             s: current.s, 
             a: current.a, 
-            date: date.toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' }), 
-            time: date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) 
+            date: date.toLocaleDateString(isEnLocale ? 'en-US' : 'ar-EG', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' }), 
+            time: date.toLocaleTimeString(isEnLocale ? 'en-US' : 'ar-EG', { hour: '2-digit', minute: '2-digit' }) 
         }; 
-        const newBookmarks = [newBookmark, ...stored]; 
+        const newBookmarks = [newBookmark, ...(bookmarks || [])]; 
         localStorage.setItem('quran_bookmarks_list' + bookmarkSuffix, JSON.stringify(newBookmarks)); 
         setBookmarks(newBookmarks); 
         showToast(`تم حفظ الإشارة المرجعية`); 

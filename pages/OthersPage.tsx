@@ -261,7 +261,7 @@ const OthersPage: React.FC<OthersPageProps> = ({ onBack, onNavigate, onOpenTheme
                 title={isEn ? "Ruqyah Guide" : "دليل وشرح الرقية الشرعية"}
                 aria-label={isEn ? "Ruqyah Guide" : "دليل وشرح الرقية الشرعية"}
               >
-                <HelpCircle size={19} />
+                <i className="fa-solid fa-circle-question text-lg text-black"></i>
               </button>
               <ThemePageLock />
               <button

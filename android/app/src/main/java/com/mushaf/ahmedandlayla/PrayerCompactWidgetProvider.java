@@ -210,6 +210,7 @@ public class PrayerCompactWidgetProvider extends AppWidgetProvider {
                 // Render prayer name & time
                 String label = isArabic ? (nextPrayerName + " بعد") : (nextPrayerName + " in");
                 views.setTextViewText(R.id.widget_compact_prayer_name, label);
+                views.setTextViewText(R.id.widget_compact_prayer_tag, isArabic ? "الأذان" : "Adhan");
                 if (!nextPrayerTimeStr.isEmpty()) {
                     views.setTextViewText(R.id.widget_compact_prayer_time, PrayerWidgetProvider.formatNumerals(nextPrayerTimeStr, isArabic));
                 }
@@ -240,16 +241,26 @@ public class PrayerCompactWidgetProvider extends AppWidgetProvider {
                     }
                 }
 
-                // Theme & Dark Mode
+                // Theme & Real-time Home Screen Sync
+                boolean isDark = false;
+                int primary = Color.parseColor("#10B981");
+                int secondary = Color.parseColor("#7C3AED");
+                int textColor = Color.parseColor("#0F172A");
+                int cardBgColor = Color.WHITE;
+                boolean hasCustomCardBg = false;
+
                 if (data.has("theme") && !data.isNull("theme")) {
                     JSONObject themeObj = data.getJSONObject("theme");
-                    boolean isDark = themeObj.optBoolean("isDark", false);
-                    int primary = Color.parseColor("#10B981");
-                    int textColor = isDark ? Color.WHITE : Color.parseColor("#0F172A");
+                    isDark = themeObj.optBoolean("isDark", false);
 
                     if (themeObj.has("primaryColor")) {
                         try {
                             primary = Color.parseColor(themeObj.getString("primaryColor"));
+                        } catch (Exception ignored) {}
+                    }
+                    if (themeObj.has("secondaryColor")) {
+                        try {
+                            secondary = Color.parseColor(themeObj.getString("secondaryColor"));
                         } catch (Exception ignored) {}
                     }
                     if (themeObj.has("textColor")) {
@@ -257,25 +268,44 @@ public class PrayerCompactWidgetProvider extends AppWidgetProvider {
                             textColor = Color.parseColor(themeObj.getString("textColor"));
                         } catch (Exception ignored) {}
                     }
+                    if (themeObj.has("cardBg")) {
+                        try {
+                            cardBgColor = Color.parseColor(themeObj.getString("cardBg"));
+                            hasCustomCardBg = true;
+                        } catch (Exception ignored) {}
+                    }
+                }
 
-                    if (isDark) {
+                if (isDark) {
+                    if (hasCustomCardBg) {
+                        views.setInt(R.id.widget_compact_root, "setBackgroundColor", cardBgColor);
+                    } else {
                         views.setInt(R.id.widget_compact_root, "setBackgroundResource", R.drawable.widget_bg_dark);
-                        views.setTextColor(R.id.widget_compact_countdown, textColor);
-                        views.setTextColor(R.id.widget_compact_prayer_time, textColor);
-                        views.setTextColor(R.id.widget_compact_city, Color.parseColor("#94A3B8"));
-                        views.setInt(R.id.widget_compact_sep1, "setBackgroundColor", Color.parseColor("#334155"));
-                        views.setInt(R.id.widget_compact_sep2, "setBackgroundColor", Color.parseColor("#334155"));
+                    }
+                    if (textColor == Color.parseColor("#0F172A")) {
+                        textColor = Color.WHITE;
+                    }
+                    views.setTextColor(R.id.widget_compact_countdown, textColor);
+                    views.setTextColor(R.id.widget_compact_prayer_time, textColor);
+                    views.setTextColor(R.id.widget_compact_city, Color.parseColor("#94A3B8"));
+                    views.setTextColor(R.id.widget_compact_prayer_tag, Color.parseColor("#94A3B8"));
+                    views.setInt(R.id.widget_compact_sep1, "setBackgroundColor", Color.parseColor("#334155"));
+                    views.setInt(R.id.widget_compact_sep2, "setBackgroundColor", Color.parseColor("#334155"));
+                } else {
+                    if (hasCustomCardBg && cardBgColor != Color.WHITE) {
+                        views.setInt(R.id.widget_compact_root, "setBackgroundColor", cardBgColor);
                     } else {
                         views.setInt(R.id.widget_compact_root, "setBackgroundResource", R.drawable.widget_bg_white);
-                        views.setTextColor(R.id.widget_compact_countdown, textColor);
-                        views.setTextColor(R.id.widget_compact_prayer_time, textColor);
-                        views.setTextColor(R.id.widget_compact_city, Color.parseColor("#64748B"));
-                        views.setInt(R.id.widget_compact_sep1, "setBackgroundColor", Color.parseColor("#E2E8F0"));
-                        views.setInt(R.id.widget_compact_sep2, "setBackgroundColor", Color.parseColor("#E2E8F0"));
                     }
-
-                    views.setTextColor(R.id.widget_compact_prayer_name, primary);
+                    views.setTextColor(R.id.widget_compact_countdown, textColor);
+                    views.setTextColor(R.id.widget_compact_prayer_time, textColor);
+                    views.setTextColor(R.id.widget_compact_city, Color.parseColor("#64748B"));
+                    views.setTextColor(R.id.widget_compact_prayer_tag, Color.parseColor("#64748B"));
+                    views.setInt(R.id.widget_compact_sep1, "setBackgroundColor", Color.parseColor("#E2E8F0"));
+                    views.setInt(R.id.widget_compact_sep2, "setBackgroundColor", Color.parseColor("#E2E8F0"));
                 }
+
+                views.setTextColor(R.id.widget_compact_prayer_name, primary);
 
             } catch (Exception e) {
                 e.printStackTrace();

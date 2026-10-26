@@ -1334,7 +1334,7 @@ const HajjUmrah: FC<{ onBack: () => void, onNavigate: (page: string) => void }> 
                                 title={isEn ? "Hajj & Umrah Guide" : "دليل الحج والعمرة"}
                                 aria-label={isEn ? "Hajj & Umrah Guide" : "دليل الحج والعمرة"}
                             >
-                                <HelpCircle size={19} />
+                                <i className="fa-solid fa-circle-question text-lg text-black"></i>
                             </button>
 
                             {screen === 'home' && <ThemePageLock />}

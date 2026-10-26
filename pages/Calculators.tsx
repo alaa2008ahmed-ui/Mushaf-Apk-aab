@@ -149,7 +149,7 @@ const Calculators: React.FC<CalculatorsProps> = ({ onBack, onNavigate }) => {
                                 title={isEn ? "Calculator Guide" : "دليل وشرح الحاسبة الشرعية"}
                                 aria-label={isEn ? "Calculator Guide" : "دليل وشرح الحاسبة الشرعية"}
                             >
-                                <HelpCircle size={19} />
+                                <i className="fa-solid fa-circle-question text-lg text-black"></i>
                             </button>
                             <ThemePageLock />
                             <button

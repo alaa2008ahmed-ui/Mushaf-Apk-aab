@@ -309,7 +309,7 @@ function Adia({ onBack, onNavigate }: AdiaProps) {
                                 title={isEn ? "Adia Guide" : "دليل الأدعية"}
                                 aria-label={isEn ? "Adia Guide" : "دليل الأدعية"}
                             >
-                                <HelpCircle size={19} />
+                                <i className="fa-solid fa-circle-question text-lg text-black"></i>
                             </button>
                             <ThemePageLock />
                             <button

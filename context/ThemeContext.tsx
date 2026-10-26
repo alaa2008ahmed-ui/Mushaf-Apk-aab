@@ -192,6 +192,9 @@ export const ThemeProvider = ({ children }: { children?: ReactNode }) => {
         }
         
         saveSettings(nextSettings);
+
+        const targetTheme = presetThemes[key] || presetThemes.default;
+        syncWidgetThemeColors(key, targetTheme);
     };
 
     const setIsGlobalTheme = (isGlobal: boolean) => {

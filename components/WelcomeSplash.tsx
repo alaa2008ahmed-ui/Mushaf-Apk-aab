@@ -78,7 +78,7 @@ export const WelcomeSplash: React.FC<WelcomeSplashProps> = ({ onSelectLanguage }
               <div className="absolute inset-1.5 rounded-[1.85rem] sm:rounded-[2.35rem] border border-emerald-500/20 pointer-events-none" />
               <img
                 src="/app_icon.png"
-                alt="مصحف أحمد وليلى"
+                alt="مصحف أحمد و ليلى"
                 className="w-full h-full object-contain rounded-2xl drop-shadow-sm select-none pointer-events-none"
               />
             </motion.div>
@@ -94,7 +94,7 @@ export const WelcomeSplash: React.FC<WelcomeSplashProps> = ({ onSelectLanguage }
                 className="text-3xl sm:text-4xl font-extrabold text-[#1B7A53] tracking-tight leading-snug"
                 style={{ fontFamily: "'Cairo', sans-serif" }}
               >
-                مصحف أحمد وليلى
+                مصحف أحمد و ليلى
               </h2>
               <p
                 className="text-base sm:text-lg font-bold text-slate-700 mt-0.5 tracking-tight"

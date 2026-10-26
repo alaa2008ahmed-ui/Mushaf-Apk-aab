@@ -132,7 +132,7 @@ const HadithModal: React.FC<HadithModalProps> = ({
             if (activeExplanation.valuesBenefits?.length) {
                 text += `🌿 الفوائد التربوية والسلوكية:\n` + activeExplanation.valuesBenefits.map((b) => `• ${b}`).join('\n') + `\n\n`;
             }
-            text += `— من تطبيق مصحف أحمد وليلى (الأربعون النووية)`;
+            text += `— من تطبيق مصحف أحمد و ليلى (الأربعون النووية)`;
         }
         handleCopy(text, e);
     };
@@ -618,7 +618,7 @@ const Nawawi: React.FC<NawawiProps> = ({ onBack, onNavigate }) => {
                                 title={isEn ? "Nawawi Guide" : "دليل وشرح الأربعون النووية"}
                                 aria-label={isEn ? "Nawawi Guide" : "دليل وشرح الأربعون النووية"}
                             >
-                                <HelpCircle size={19} />
+                                <i className="fa-solid fa-circle-question text-lg text-black"></i>
                             </button>
                             <ThemePageLock />
                             <button

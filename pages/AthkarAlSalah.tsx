@@ -447,7 +447,7 @@ function AthkarAlSalah({ onBack, onNavigate }: AthkarAlSalahProps) {
                                 title={isEn ? "Athkar Guide" : "دليل أذكار الصلاة"}
                                 aria-label={isEn ? "Athkar Guide" : "دليل أذكار الصلاة"}
                             >
-                                <HelpCircle size={19} />
+                                <i className="fa-solid fa-circle-question text-lg text-black"></i>
                             </button>
                             <ThemePageLock />
                             <button

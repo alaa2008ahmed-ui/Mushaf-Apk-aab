@@ -509,9 +509,14 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
                 }
 
                 if (isDark) {
-                    views.setInt(R.id.widget_root, "setBackgroundResource", R.drawable.widget_bg_dark);
+                    if (cardBgColor != Color.WHITE) {
+                        views.setInt(R.id.widget_root, "setBackgroundColor", cardBgColor);
+                        views.setInt(R.id.widget_middle_section, "setBackgroundColor", cardBgColor);
+                    } else {
+                        views.setInt(R.id.widget_root, "setBackgroundResource", R.drawable.widget_bg_dark);
+                        views.setInt(R.id.widget_middle_section, "setBackgroundColor", Color.parseColor("#1E293B"));
+                    }
                     views.setInt(R.id.widget_top_right_section, "setBackgroundResource", R.drawable.widget_top_right_bg_dark);
-                    views.setInt(R.id.widget_middle_section, "setBackgroundColor", cardBgColor != Color.WHITE ? cardBgColor : Color.parseColor("#1E293B"));
                     views.setInt(R.id.widget_divider_1, "setBackgroundColor", Color.parseColor("#334155"));
                     views.setInt(R.id.sep_1, "setBackgroundColor", Color.parseColor("#334155"));
                     views.setInt(R.id.sep_2, "setBackgroundColor", Color.parseColor("#334155"));
@@ -522,9 +527,14 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
                         textColor = Color.WHITE;
                     }
                 } else {
-                    views.setInt(R.id.widget_root, "setBackgroundResource", R.drawable.widget_bg_white);
+                    if (cardBgColor != Color.WHITE) {
+                        views.setInt(R.id.widget_root, "setBackgroundColor", cardBgColor);
+                        views.setInt(R.id.widget_middle_section, "setBackgroundColor", cardBgColor);
+                    } else {
+                        views.setInt(R.id.widget_root, "setBackgroundResource", R.drawable.widget_bg_white);
+                        views.setInt(R.id.widget_middle_section, "setBackgroundColor", Color.WHITE);
+                    }
                     views.setInt(R.id.widget_top_right_section, "setBackgroundResource", R.drawable.widget_top_right_bg);
-                    views.setInt(R.id.widget_middle_section, "setBackgroundColor", cardBgColor);
                     views.setInt(R.id.widget_divider_1, "setBackgroundColor", Color.parseColor("#E0E0E0"));
                     views.setInt(R.id.sep_1, "setBackgroundColor", Color.parseColor("#E0E0E0"));
                     views.setInt(R.id.sep_2, "setBackgroundColor", Color.parseColor("#E0E0E0"));

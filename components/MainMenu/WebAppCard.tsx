@@ -44,7 +44,7 @@ export const WebAppCard: React.FC<WebAppCardProps> = ({ setToastMessage }) => {
   const handleShareLink = async (e: React.MouseEvent) => {
     e.stopPropagation();
     const shareData = {
-      title: language === 'en' ? 'Mushaf Ahmed & Laila Web App' : 'تطبيق مصحف أحمد وليلى',
+      title: language === 'en' ? 'Mushaf Ahmed & Laila Web App' : 'تطبيق مصحف أحمد و ليلى',
       text: language === 'en'
         ? `To open the app on your browser or iPhone, tap the link:\n${WEB_APP_URL}`
         : `لمشاهدة التطبيق على المتصفح أو الآيفون اضغط على الرابط التالي:\n${WEB_APP_URL}`,

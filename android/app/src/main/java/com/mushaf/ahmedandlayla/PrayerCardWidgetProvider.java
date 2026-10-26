@@ -273,10 +273,17 @@ public class PrayerCardWidgetProvider extends AppWidgetProvider {
                             textColor = Color.parseColor(themeObj.getString("textColor"));
                         } catch (Exception ignored) {}
                     }
+                    if (themeObj.has("cardBg")) {
+                        try {
+                            int customCardBg = Color.parseColor(themeObj.getString("cardBg"));
+                            if (customCardBg != Color.WHITE) {
+                                views.setInt(R.id.widget_card_root, "setBackgroundColor", customCardBg);
+                            }
+                        } catch (Exception ignored) {}
+                    }
                 }
 
                 if (isDark) {
-                    views.setInt(R.id.widget_card_root, "setBackgroundResource", R.drawable.widget_bg_dark);
                     views.setTextColor(R.id.widget_card_city, Color.parseColor("#E2E8F0"));
                     views.setTextColor(R.id.widget_card_date, Color.parseColor("#94A3B8"));
                     views.setInt(R.id.widget_card_hero, "setBackgroundColor", Color.parseColor("#0F172A"));
@@ -284,7 +291,6 @@ public class PrayerCardWidgetProvider extends AppWidgetProvider {
                         textColor = Color.WHITE;
                     }
                 } else {
-                    views.setInt(R.id.widget_card_root, "setBackgroundResource", R.drawable.widget_bg_white);
                     views.setTextColor(R.id.widget_card_city, Color.parseColor("#334155"));
                     views.setTextColor(R.id.widget_card_date, Color.parseColor("#64748B"));
                     views.setInt(R.id.widget_card_hero, "setBackgroundColor", secondaryColor);

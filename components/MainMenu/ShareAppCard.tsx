@@ -43,7 +43,7 @@ export const ShareAppCard: React.FC<ShareAppCardProps> = ({
 
   const handleShareApp = async () => {
     const shareData = {
-      title: t('app.name', 'مصحف أحمد وليلى'),
+      title: t('app.name', 'مصحف أحمد و ليلى'),
       text: textToShare,
     };
 

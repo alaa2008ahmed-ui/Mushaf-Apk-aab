@@ -173,7 +173,7 @@ const IslamicSitesPage: React.FC<IslamicSitesPageProps> = ({ onBack, onNavigate 
                                 title={isEn ? "Islamic Sites Guide" : "دليل المواقع الإسلامية"}
                                 aria-label={isEn ? "Islamic Sites Guide" : "دليل المواقع الإسلامية"}
                             >
-                                <HelpCircle size={19} />
+                                <i className="fa-solid fa-circle-question text-lg text-black"></i>
                             </button>
                             <ThemePageLock />
                             <button

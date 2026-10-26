@@ -243,7 +243,7 @@ const AsmaulHusna: React.FC<{ onBack: () => void, onNavigate: (id: string, param
                                 title={isEn ? "Asmaul Husna Guide" : "دليل أسماء الله الحسنى"}
                                 aria-label={isEn ? "Asmaul Husna Guide" : "دليل أسماء الله الحسنى"}
                             >
-                                <HelpCircle size={19} />
+                                <i className="fa-solid fa-circle-question text-lg text-black"></i>
                             </button>
                             <ThemePageLock />
                             <button

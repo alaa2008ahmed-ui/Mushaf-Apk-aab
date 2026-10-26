@@ -1122,19 +1122,35 @@ export const PrayerTimesProvider = ({ children }: { children: ReactNode }) => {
         if (isNative) {
             try {
                 const pending = await LocalNotifications.getPending();
-                const prayerNotifs = pending.notifications.filter(n => n.id >= 1000 && n.id < 9000);
+                const delivered = await LocalNotifications.getDeliveredNotifications();
+                const deliveredIds = new Set((delivered?.notifications || []).map(n => n.id));
+
+                // CRITICAL: NEVER cancel notifications that are currently delivered and visible in the notification drawer!
+                // Only cancel truly pending, future alarms.
+                const prayerNotifs = (pending?.notifications || []).filter(
+                    n => n.id >= 1000 && n.id < 9000 && !deliveredIds.has(n.id)
+                );
                 if (prayerNotifs.length > 0) {
                     await LocalNotifications.cancel({ notifications: prayerNotifs });
                 }
 
                 if (notificationsToSchedule.length > 0) {
-                    const unbundledPrayerNotifs = notificationsToSchedule.map(n => ({
-                        ...n,
-                        group: `standalone_prayer_${n.id}`,
-                        groupSummary: false
-                    }));
-                    await LocalNotifications.schedule({ notifications: unbundledPrayerNotifs });
-                    console.log(`[Capacitor] Scheduled ${unbundledPrayerNotifs.length} independent prayer/iqama notifications.`);
+                    // Clean and assign collision-free IDs if an ID is currently active in the status bar
+                    const cleanPrayerNotifs = notificationsToSchedule.map(n => {
+                        let finalId = n.id;
+                        while (deliveredIds.has(finalId)) {
+                            finalId += 500; // shift to avoid overwriting or dismissing currently visible notification
+                        }
+                        const { group, groupSummary, ...rest } = n;
+                        return {
+                            ...rest,
+                            id: finalId,
+                            ongoing: false,
+                            autoCancel: true
+                        };
+                    });
+                    await LocalNotifications.schedule({ notifications: cleanPrayerNotifs });
+                    console.log(`[Capacitor] Scheduled ${cleanPrayerNotifs.length} independent prayer/iqama notifications without orphan groups.`);
                 }
             } catch (err) {
                 console.warn('Error scheduling via LocalNotifications:', err);
@@ -1163,8 +1179,6 @@ export const PrayerTimesProvider = ({ children }: { children: ReactNode }) => {
                     foreground: true,
                     smallIcon: 'ic_stat_name',
                     icon: 'ic_stat_name',
-                    group: `standalone_prayer_${n.id}`,
-                    groupSummary: false,
                     androidAllowWhileIdle: true
                 }));
                 if (cordovaNotifs.length > 0) {
@@ -1484,7 +1498,8 @@ export const PrayerTimesProvider = ({ children }: { children: ReactNode }) => {
                                             ? 'Remember Allah. The Prophet ﷺ said: "O Bilal, call the Adhan so we may find comfort in prayer."' 
                                             : 'لا تنس ذكر الله. قال رسول الله ﷺ: "أرحنا بها يا بلال"',
                                         icon: '/icon.png',
-                                        tag: `standalone_web_adhan_${key}_${Date.now()}`
+                                        tag: `standalone_web_adhan_${key}_${Date.now()}`,
+                                        requireInteraction: true
                                     });
                                 } catch (e) {}
                             }

@@ -86,7 +86,7 @@ Fresh modern design for all pages to elevate reading experience, typography, the
 🤍 Share with your family and loved ones..
 "The one who guides to good is like the one who does it." 🤲🌱`;
 
-const APP_SHARE_TEXT = `🕋✨ التحديث الأكبر لتطبيق "مصحف أحمد وليلى"! ✨🕋
+const APP_SHARE_TEXT = `🕋✨ التحديث الأكبر لتطبيق "مصحف أحمد و ليلى"! ✨🕋
 (رفيقك الإيماني الشامل — يعمل بدون إنترنت وبدون إعلانات)
 
 نسعد بأن نضع بين أيديكم إصداراً استثنائياً وجديداً كلياً، خضع لتطوير شامل وتحديث جذري لجميع صفحات التطبيق وواجهته لتكون أكثر سلاسة، وجمالاً، وسرعة في الاستخدام، مع باقة حصرية من الصفحات والميزات الإيمانية الجديدة:

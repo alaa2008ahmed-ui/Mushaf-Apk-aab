@@ -131,9 +131,31 @@ export const syncWidgetThemeColors = async (themeKey: string, theme: any) => {
 
   try {
     const rawData = await Preferences.get({ key: 'widget_prayer_data' });
-    if (!rawData.value) return;
+    let parsed: any = {};
+    if (rawData.value) {
+      try {
+        parsed = JSON.parse(rawData.value);
+      } catch (err) {
+        parsed = {};
+      }
+    }
 
-    const parsed = JSON.parse(rawData.value);
+    if (!parsed.times) {
+      parsed.city = parsed.city || 'الدمام';
+      parsed.next_prayer_name = parsed.next_prayer_name || 'الفجر';
+      parsed.times = {
+        fajr: '04:30',
+        sunrise: '05:50',
+        dhuhr: '11:45',
+        asr: '02:55',
+        maghrib: '05:40',
+        isha: '07:10'
+      };
+      parsed.hijri = parsed.hijri || '';
+      parsed.gregorian = parsed.gregorian || '';
+      parsed.base_date_millis = Date.now();
+    }
+
     const isDark = theme.isDark ?? false;
     const primaryColor = theme.palette?.[0] || theme.accent || '#10b981';
     const secondaryColor = theme.palette?.[1] || theme.palette?.[0] || '#7c3aed';

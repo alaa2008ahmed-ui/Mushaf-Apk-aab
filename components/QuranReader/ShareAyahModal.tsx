@@ -591,7 +591,7 @@ const ShareAyahModal: React.FC<ShareAyahModalProps> = ({
         if (isSharing) return;
         setIsSharing(true);
         
-        let shareText = `${surahInfo}\nآيات من القرآن الكريم . بواسطة : مصحف أحمد وليلى`;
+        let shareText = `${surahInfo}\nآيات من القرآن الكريم . بواسطة : مصحف أحمد و ليلى`;
         
         if (shareType === 'page') {
             let pageSurahInfo = surahInfo;
@@ -603,7 +603,7 @@ const ShareAyahModal: React.FC<ShareAyahModalProps> = ({
                     : `سورة ${getSurahName(firstPageAyah.sNum)} آية ${toArabic(firstPageAyah.numberInSurah)} - سورة ${getSurahName(lastPageAyah.sNum)} آية ${toArabic(lastPageAyah.numberInSurah)}`;
             }
             
-            shareText = `صفحة ${toArabic(pageNum)} - ${pageSurahInfo}\nآيات من القرآن الكريم . بواسطة : مصحف أحمد وليلى`;
+            shareText = `صفحة ${toArabic(pageNum)} - ${pageSurahInfo}\nآيات من القرآن الكريم . بواسطة : مصحف أحمد و ليلى`;
         }
         
         const fullText = `${combinedText}\n\n${combinedExplanation ? combinedExplanation + '\n\n' : ''}${shareText}`;
@@ -1106,7 +1106,7 @@ const ShareAyahModal: React.FC<ShareAyahModalProps> = ({
     const handleCopy = async () => {
         if (isCopying) return;
         setIsCopying(true);
-        const shareText = `${surahInfo}\nآيات من القرآن الكريم . بواسطة : مصحف أحمد وليلى`;
+        const shareText = `${surahInfo}\nآيات من القرآن الكريم . بواسطة : مصحف أحمد و ليلى`;
         const fullText = `${combinedText}\n\n${combinedExplanation ? combinedExplanation + '\n\n' : ''}${shareText}`;
         
         try {
@@ -1283,7 +1283,7 @@ const ShareAyahModal: React.FC<ShareAyahModalProps> = ({
                                             style={{ fontFamily: 'var(--font-lateef), serif', color: selectedBg.accent, textShadow: '0 3px 9px rgba(0,0,0,0.8)', fontSize: '42px', fontWeight: 700, textAlign: 'center', textDecoration: 'none' }} 
                                             dir={isEn ? 'ltr' : 'rtl'}
                                         >
-                                            {isEn ? 'Mushaf Ahmed & Laila' : 'مصحف أحمد وليلى'}
+                                            {isEn ? 'Mushaf Ahmed & Laila' : 'مصحف أحمد و ليلى'}
                                         </a>
                                         {customText ? (
                                             <span 
@@ -1438,7 +1438,7 @@ const ShareAyahModal: React.FC<ShareAyahModalProps> = ({
                     }}
                 >
                     <div style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', letterSpacing: 0, wordSpacing: 0 }}>
-                        <a href="https://play.google.com/store/apps/details?id=com.mushaf.ahmedandlayla" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-lateef), serif', fontSize: '36px', color: '#3b82f6', fontWeight: 'bold', textDecoration: 'none', letterSpacing: 0, wordSpacing: 0, fontVariantLigatures: 'normal' }}>{isEn ? 'Mushaf Ahmed & Laila' : 'مصحف أحمد وليلى'}</a>
+                        <a href="https://play.google.com/store/apps/details?id=com.mushaf.ahmedandlayla" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-lateef), serif', fontSize: '36px', color: '#3b82f6', fontWeight: 'bold', textDecoration: 'none', letterSpacing: 0, wordSpacing: 0, fontVariantLigatures: 'normal' }}>{isEn ? 'Mushaf Ahmed & Laila' : 'مصحف أحمد و ليلى'}</a>
                     </div>
                 </div>
             </div>
@@ -1691,7 +1691,7 @@ const ShareAyahModal: React.FC<ShareAyahModalProps> = ({
                                                 style={{ fontFamily: 'var(--font-scheherazade), serif', color: selectedBg.accent, textShadow: '0 1px 4px rgba(0,0,0,0.8)', fontSize: '16px', fontWeight: 800, textAlign: 'center', textDecoration: 'none' }} 
                                                 dir="rtl"
                                             >
-                                                {isEn ? 'Mushaf Ahmed & Laila' : 'مصحف أحمد وليلى'}
+                                                {isEn ? 'Mushaf Ahmed & Laila' : 'مصحف أحمد و ليلى'}
                                             </a>
                                             {customText ? (
                                                 <span 

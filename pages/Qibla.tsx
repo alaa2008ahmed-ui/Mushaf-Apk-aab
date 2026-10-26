@@ -212,7 +212,7 @@ function Qibla({ onBack, onNavigate }: { onBack: () => void, onNavigate: (page: 
                                 title={isEn ? "Qibla Guide" : "دليل اتجاه القبلة"}
                                 aria-label={isEn ? "Qibla Guide" : "دليل اتجاه القبلة"}
                             >
-                                <HelpCircle size={19} />
+                                <i className="fa-solid fa-circle-question text-lg text-black"></i>
                             </button>
                             <ThemePageLock />
                             <button

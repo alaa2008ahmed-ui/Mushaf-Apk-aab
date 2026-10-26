@@ -685,7 +685,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ onBack, onNavigate }) => {
                                 title={isEn ? "Worship Mentor Guide" : "دليل وشرح مربي العبادات"}
                                 aria-label={isEn ? "Worship Mentor Guide" : "دليل وشرح مربي العبادات"}
                             >
-                                <HelpCircle size={19} />
+                                <i className="fa-solid fa-circle-question text-lg text-black"></i>
                             </button>
                             <ThemePageLock />
                             <button

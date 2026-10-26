@@ -1155,11 +1155,14 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const formatNumber = (n: number | string): string => {
+    const str = String(n);
     if (language === 'en') {
-      return String(n);
+      return str
+        .replace(/[٠-٩]/g, d => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)])
+        .replace(/[۰-۹]/g, d => '0123456789'['۰۱۲۳۴۵۶۷۸۹'.indexOf(d)]);
     }
     const easternDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-    return String(n).replace(/[0-9]/g, (w) => easternDigits[+w]);
+    return str.replace(/[0-9]/g, (w) => easternDigits[+w]);
   };
 
   return (

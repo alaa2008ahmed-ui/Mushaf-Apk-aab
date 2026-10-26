@@ -215,17 +215,17 @@ public class PersistentPrayerNotification {
             StringBuilder summary = new StringBuilder();
             if (times != null) {
                 if (isArabic) {
-                    summary.append("الفجر: ").append(times.optString("fajr", ""))
-                           .append(" • الظهر: ").append(times.optString("dhuhr", ""))
-                           .append(" • العصر: ").append(times.optString("asr", ""))
-                           .append(" • المغرب: ").append(times.optString("maghrib", ""))
-                           .append(" • العشاء: ").append(times.optString("isha", ""));
+                    summary.append("الفجر: ").append(PrayerWidgetProvider.formatNumerals(times.optString("fajr", ""), true))
+                           .append(" • الظهر: ").append(PrayerWidgetProvider.formatNumerals(times.optString("dhuhr", ""), true))
+                           .append(" • العصر: ").append(PrayerWidgetProvider.formatNumerals(times.optString("asr", ""), true))
+                           .append(" • المغرب: ").append(PrayerWidgetProvider.formatNumerals(times.optString("maghrib", ""), true))
+                           .append(" • العشاء: ").append(PrayerWidgetProvider.formatNumerals(times.optString("isha", ""), true));
                 } else {
-                    summary.append("Fajr: ").append(times.optString("fajr", ""))
-                           .append(" • Dhuhr: ").append(times.optString("dhuhr", ""))
-                           .append(" • Asr: ").append(times.optString("asr", ""))
-                           .append(" • Maghrib: ").append(times.optString("maghrib", ""))
-                           .append(" • Isha: ").append(times.optString("isha", ""));
+                    summary.append("Fajr: ").append(PrayerWidgetProvider.formatNumerals(times.optString("fajr", ""), false))
+                           .append(" • Dhuhr: ").append(PrayerWidgetProvider.formatNumerals(times.optString("dhuhr", ""), false))
+                           .append(" • Asr: ").append(PrayerWidgetProvider.formatNumerals(times.optString("asr", ""), false))
+                           .append(" • Maghrib: ").append(PrayerWidgetProvider.formatNumerals(times.optString("maghrib", ""), false))
+                           .append(" • Isha: ").append(PrayerWidgetProvider.formatNumerals(times.optString("isha", ""), false));
                 }
             }
 
@@ -241,7 +241,8 @@ public class PersistentPrayerNotification {
             String prayerLabel = (isArabic ? "الصلاة القادمة: " : "Next Prayer: ") + nextPrayerName;
             String fallbackTitle = prayerLabel;
             if (!remainingFormatted.isEmpty()) {
-                fallbackTitle += " (" + (isArabic ? "متبقي " : "in ") + remainingFormatted + ")";
+                String formattedRem = PrayerWidgetProvider.formatNumerals(remainingFormatted, isArabic);
+                fallbackTitle += " (" + (isArabic ? "متبقي " : "in ") + formattedRem + ")";
             }
 
             // Restore intent: if swiped away while enabled, automatically restore it

@@ -211,8 +211,6 @@ public class PrayerSilentReceiver extends BroadcastReceiver {
                 .setContentIntent(pendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
-                .setGroup("standalone_silent_" + notifId)
-                .setGroupSummary(false)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
 
             if (soundUri != null) {

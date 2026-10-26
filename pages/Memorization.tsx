@@ -367,7 +367,7 @@ const Memorization: React.FC<MemorizationProps> = ({ onBack, onNavigate }) => {
                                     title={isEn ? "Memorization Guide" : "دليل وشرح التحفيظ"}
                                     aria-label={isEn ? "Memorization Guide" : "دليل وشرح التحفيظ"}
                                 >
-                                    <HelpCircle size={20} />
+                                    <i className="fa-solid fa-circle-question text-lg text-black"></i>
                                 </button>
                                 <ThemePageLock />
                                 <button

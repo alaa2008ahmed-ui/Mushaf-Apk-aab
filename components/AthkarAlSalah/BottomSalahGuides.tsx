@@ -39,7 +39,7 @@ export const BottomSalahGuides: React.FC<BottomSalahGuidesProps> = ({
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = text;
         const cleanText = tempDiv.textContent || tempDiv.innerText || text;
-        navigator.clipboard.writeText(`${title}\n\n${cleanText}\n\nمصحف أحمد وليلى`);
+        navigator.clipboard.writeText(`${title}\n\n${cleanText}\n\nمصحف أحمد و ليلى`);
         setToastMessage(isEn ? 'Copied to clipboard 📋' : 'تم النسخ إلى الحافظة 📋');
     };
 

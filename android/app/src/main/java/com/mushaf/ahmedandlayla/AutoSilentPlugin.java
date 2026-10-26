@@ -196,7 +196,6 @@ public class AutoSilentPlugin extends Plugin {
             PrayerWidgetProvider.updateAllWidgets(context);
             PrayerCompactWidgetProvider.updateAllWidgets(context);
             PrayerCardWidgetProvider.updateAllWidgets(context);
-            PrayerMinimalWidgetProvider.updateAllWidgets(context);
             PersistentPrayerNotification.update(context);
         }
         JSObject ret = new JSObject();
@@ -385,7 +384,6 @@ public class AutoSilentPlugin extends Plugin {
         PrayerWidgetProvider.updateAllWidgets(context);
         PrayerCompactWidgetProvider.updateAllWidgets(context);
         PrayerCardWidgetProvider.updateAllWidgets(context);
-        PrayerMinimalWidgetProvider.updateAllWidgets(context);
 
         JSObject ret = new JSObject();
         ret.put("success", true);

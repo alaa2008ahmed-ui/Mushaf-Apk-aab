@@ -8,10 +8,11 @@
     android:clipToOutline="true"
     android:gravity="center_vertical"
     android:baselineAligned="false"
-    android:paddingStart="6dp"
-    android:paddingEnd="6dp"
-    android:paddingTop="4dp"
-    android:paddingBottom="4dp">
+    android:weightSum="3"
+    android:paddingStart="4dp"
+    android:paddingEnd="4dp"
+    android:paddingTop="3dp"
+    android:paddingBottom="3dp">
 
     <!-- Section 1: App Icon & City Name (Exact 1/3 Width) -->
     <LinearLayout
@@ -25,20 +26,21 @@
 
         <ImageView
             android:id="@+id/widget_compact_icon"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
             android:src="@mipmap/ic_launcher"
             android:contentDescription="App Logo" />
 
         <TextView
             android:id="@+id/widget_compact_city"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="الدمام"
             android:textColor="#334155"
-            android:textSize="13sp"
+            android:textSize="11sp"
             android:textStyle="bold"
             android:singleLine="true"
+            android:ellipsize="end"
             android:gravity="center"
             android:layout_marginTop="2dp" />
     </LinearLayout>
@@ -49,8 +51,8 @@
         android:layout_width="1dp"
         android:layout_height="match_parent"
         android:background="#E2E8F0"
-        android:layout_marginTop="6dp"
-        android:layout_marginBottom="6dp" />
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp" />
 
     <!-- Section 2: Next Prayer & Live Countdown (Exact 1/3 Width) -->
     <LinearLayout
@@ -64,21 +66,24 @@
 
         <TextView
             android:id="@+id/widget_compact_prayer_name"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="العصر بعد"
             android:textColor="#10B981"
-            android:textSize="13sp"
+            android:textSize="11sp"
             android:textStyle="bold"
+            android:singleLine="true"
+            android:ellipsize="end"
             android:gravity="center" />
 
         <Chronometer
             android:id="@+id/widget_compact_countdown"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textColor="#0F172A"
-            android:textSize="18sp"
+            android:textSize="15sp"
             android:textStyle="bold"
+            android:singleLine="true"
             android:gravity="center"
             android:layout_marginTop="2dp"
             android:countDown="true" />
@@ -90,10 +95,10 @@
         android:layout_width="1dp"
         android:layout_height="match_parent"
         android:background="#E2E8F0"
-        android:layout_marginTop="6dp"
-        android:layout_marginBottom="6dp" />
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp" />
 
-    <!-- Section 3: Exact Prayer Time (Exact 1/3 Width, Clean Centered, No Refresh Icon) -->
+    <!-- Section 3: Exact Prayer Time & Label (Exact 1/3 Width) -->
     <LinearLayout
         android:id="@+id/widget_compact_right"
         android:layout_width="0dp"
@@ -104,14 +109,28 @@
         android:padding="2dp">
 
         <TextView
+            android:id="@+id/widget_compact_prayer_tag"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="الأذان"
+            android:textColor="#64748B"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:gravity="center" />
+
+        <TextView
             android:id="@+id/widget_compact_prayer_time"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="02:38"
             android:textColor="#0F172A"
-            android:textSize="18sp"
+            android:textSize="15sp"
             android:textStyle="bold"
-            android:gravity="center" />
+            android:singleLine="true"
+            android:gravity="center"
+            android:layout_marginTop="2dp" />
     </LinearLayout>
 
 </LinearLayout>

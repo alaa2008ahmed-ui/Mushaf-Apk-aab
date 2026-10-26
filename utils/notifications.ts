@@ -81,8 +81,16 @@ export const setupNotifications = async (settings?: PhoneNotificationSettings, l
 
     // Clear ONLY existing athkar/dua notifications (IDs < 1000 or >= 9000, excluding Daily Wird IDs 9300..9399)
     // CRITICAL: NEVER cancel prayer notifications (IDs 1000..8999) or Daily Wird notifications!
+    // AND CRITICAL: NEVER cancel notifications that are currently delivered and visible in the notification drawer!
     const pending = await LocalNotifications.getPending();
-    const athkarPending = pending.notifications.filter(n => (n.id < 1000 || n.id >= 9000) && !(n.id >= 9300 && n.id <= 9399));
+    const delivered = await LocalNotifications.getDeliveredNotifications();
+    const deliveredIds = new Set((delivered?.notifications || []).map(n => n.id));
+
+    const athkarPending = (pending?.notifications || []).filter(
+        n => (n.id < 1000 || n.id >= 9000) && 
+             !(n.id >= 9300 && n.id <= 9399) && 
+             !deliveredIds.has(n.id)
+    );
     if (athkarPending.length > 0) {
         await LocalNotifications.cancel({ notifications: athkarPending });
     }
@@ -400,12 +408,20 @@ export const setupNotifications = async (settings?: PhoneNotificationSettings, l
     } catch (e) {}
 
     if (notificationsToSchedule.length > 0) {
-      const unbundledAthkarNotifs = notificationsToSchedule.map((n: any) => ({
-        ...n,
-        group: `standalone_athkar_${n.id}`,
-        groupSummary: false,
-      }));
-      await LocalNotifications.schedule({ notifications: unbundledAthkarNotifs });
+      const cleanAthkarNotifs = notificationsToSchedule.map((n: any) => {
+        let finalId = n.id;
+        while (deliveredIds.has(finalId)) {
+          finalId += 500;
+        }
+        const { group, groupSummary, ...rest } = n;
+        return {
+          ...rest,
+          id: finalId,
+          ongoing: false,
+          autoCancel: true,
+        };
+      });
+      await LocalNotifications.schedule({ notifications: cleanAthkarNotifs });
     }
 
     // Synchronize Daily Wird reminders if active with app language

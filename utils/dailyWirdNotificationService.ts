@@ -233,8 +233,13 @@ export const syncDailyWirdNotifications = async (langOverride?: 'ar' | 'en') => 
     const profile = getActiveWirdProfile();
     
     // 1. First, cancel any previously scheduled wird notifications (IDs 9301 to 9330)
+    // CRITICAL: NEVER cancel notifications that are currently delivered and visible in the notification drawer!
     const pending = await LocalNotifications.getPending();
-    const wirdPending = pending.notifications.filter(n => n.id >= 9300 && n.id <= 9330);
+    const delivered = await LocalNotifications.getDeliveredNotifications();
+    const deliveredIds = new Set((delivered?.notifications || []).map(n => n.id));
+    const wirdPending = (pending?.notifications || []).filter(
+      n => n.id >= 9300 && n.id <= 9330 && !deliveredIds.has(n.id)
+    );
     if (wirdPending.length > 0) {
       await LocalNotifications.cancel({ notifications: wirdPending });
     }
@@ -314,14 +319,26 @@ export const syncDailyWirdNotifications = async (langOverride?: 'ar' | 'en') => 
           soundFile: '/assets/audio/chime.mp3'
         },
         smallIcon: 'ic_stat_name',
-        group: `standalone_wird_${NOTIFICATION_BASE_ID + dayOffset}`,
-        groupSummary: false
+        ongoing: false,
+        autoCancel: true
       });
     }
 
     if (notificationsToSchedule.length > 0) {
-      await LocalNotifications.schedule({ notifications: notificationsToSchedule });
-      console.log(`[DailyWird] Successfully scheduled ${notificationsToSchedule.length} upcoming wird notifications in (${lang}).`);
+      const cleanWirdNotifs = notificationsToSchedule.map(n => {
+        let finalId = n.id;
+        while (deliveredIds.has(finalId)) {
+          finalId += 100;
+        }
+        return {
+          ...n,
+          id: finalId,
+          ongoing: false,
+          autoCancel: true
+        };
+      });
+      await LocalNotifications.schedule({ notifications: cleanWirdNotifs });
+      console.log(`[DailyWird] Successfully scheduled ${cleanWirdNotifs.length} upcoming wird notifications in (${lang}).`);
     }
   } catch (error) {
     console.error('[DailyWird] Error synchronizing notifications:', error);

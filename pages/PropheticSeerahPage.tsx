@@ -275,7 +275,7 @@ const PropheticSeerahPage: React.FC<PropheticSeerahPageProps> = ({ onBack, onNav
             }
 
             text += `💡 *العِبر والدروس الإيمانية والعملية:*\n${m.lessons.map((l, i) => `${i + 1}. ${l}`).join('\n')}\n\n`;
-            text += `مشارك من تطبيق مصحف أحمد وليلى`;
+            text += `مشارك من تطبيق مصحف أحمد و ليلى`;
         }
 
         navigator.clipboard.writeText(text).then(() => {
@@ -344,7 +344,7 @@ const PropheticSeerahPage: React.FC<PropheticSeerahPageProps> = ({ onBack, onNav
 
             text += `💡 *القيمة الأخلاقية والعِبرة الخالدة:*\n${s.moralLesson}\n\n`;
             text += `📜 *المصدر والتوثيق:* ${s.proof}\n\n`;
-            text += `مشارك من تطبيق مصحف أحمد وليلى`;
+            text += `مشارك من تطبيق مصحف أحمد و ليلى`;
         }
 
         navigator.clipboard.writeText(text).then(() => {
@@ -378,7 +378,7 @@ const PropheticSeerahPage: React.FC<PropheticSeerahPageProps> = ({ onBack, onNav
         if (isEn) {
             text += `📜 *Virtues of Lineage:*\nThe Messenger of Allah ﷺ said: "Indeed Allah chose Kinanah from the offspring of Ismail, and He chose Quraysh from Kinanah, and He chose Banu Hashim from Quraysh, and He chose me from Banu Hashim. So I am the best of the best" (Sahih Muslim).\n\nShared from Mushaf Ahmed & Laila App`;
         } else {
-            text += `📜 *أحاديث الاصطفاء وطهارة النسب:*\nقال رسول الله ﷺ: «إن الله اصطفى كنانة من ولد إسماعيل، واصطفى قريشاً من كنانة، واصطفى من قريش بني هاشم، واصطفاني من بني هاشم، فأنا خيار من خيار» (صحيح مسلم).\n\nمشارك من تطبيق مصحف أحمد وليلى`;
+            text += `📜 *أحاديث الاصطفاء وطهارة النسب:*\nقال رسول الله ﷺ: «إن الله اصطفى كنانة من ولد إسماعيل، واصطفى قريشاً من كنانة، واصطفى من قريش بني هاشم، واصطفاني من بني هاشم، فأنا خيار من خيار» (صحيح مسلم).\n\nمشارك من تطبيق مصحف أحمد و ليلى`;
         }
 
         navigator.clipboard.writeText(text).then(() => {
@@ -742,7 +742,7 @@ const PropheticSeerahPage: React.FC<PropheticSeerahPageProps> = ({ onBack, onNav
                                 title={isEn ? "Seerah Guide" : "دليل السيرة النبوية"}
                                 aria-label={isEn ? "Seerah Guide" : "دليل السيرة النبوية"}
                             >
-                                <HelpCircle size={19} />
+                                <i className="fa-solid fa-circle-question text-lg text-black"></i>
                             </button>
                             <ThemePageLock />
                             <button
